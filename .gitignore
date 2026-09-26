@@ -178,3 +178,6 @@ buildNumber.properties
 # OS-skräp
 .DS_Store
 Thumbs.db
+
+# Aider 
+.aider.conf.yml
