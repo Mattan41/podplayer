@@ -1,0 +1,5 @@
+# Project Guidelines
+Always read and strictly follow ARCHITECTURE.md before planning or modifying code.
+- Follow the Zorn Palette design system (strict 4 colors, border-radius: 0).
+- Next.js frontend uses static export (output: 'export'). Dynamic logic goes in Spring Boot.
+- Do not hardcode credentials.
