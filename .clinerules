@@ -3,3 +3,8 @@ Always read and strictly follow ARCHITECTURE.md before planning or modifying cod
 - Follow the Zorn Palette design system (strict 4 colors, border-radius: 0).
 - Next.js frontend uses static export (output: 'export'). Dynamic logic goes in Spring Boot.
 - Do not hardcode credentials.
+- Tests: counter table is a singleton row (id=1). Never truncate it in tests.
+- Env files: backend/.env (Spring), frontend/.env.local (Next). Never commit real values.
+- Spring config: no default values in application.yaml for datasource properties; env vars are mandatory.
+- Theme tokens: components use bg-bg / text-fg / border-fg / bg-accent / bg-cta only. Never hex values or palette names in TSX.
+- Roadmap in ARCHITECTURE.md may lag behind reality; trust pom.xml and package.json versions.

@@ -181,3 +181,6 @@ Thumbs.db
 
 # Aider 
 .aider.conf.yml
+
+#local docs
+docs/local/
