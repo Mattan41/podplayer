@@ -14,6 +14,7 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
@@ -55,9 +56,16 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Supabase signs its JWTs with ES256 (ECC P-256) and publishes only those
+     * keys in its JWKS. {@code withJwkSetUri} alone defaults to RS256, which
+     * rejects every ES256 token, so the algorithm is set explicitly here.
+     */
     @Bean
     public JwtDecoder jwtDecoder() {
-        return NimbusJwtDecoder.withJwkSetUri(jwksUri).build();
+        return NimbusJwtDecoder.withJwkSetUri(jwksUri)
+                .jwsAlgorithm(SignatureAlgorithm.ES256)
+                .build();
     }
 
     /**

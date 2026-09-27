@@ -1,8 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/api";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const SIGN_IN_ERROR = "Sign in to see the counter";
+const BACKEND_ERROR = "Could not reach the backend.";
+const INCREMENT_ERROR = "Could not increment the counter.";
+
+/** apiFetch throws this exact message when there is no Supabase session. */
+function isNotAuthenticated(error: unknown): boolean {
+  return error instanceof Error && error.message === "Not authenticated";
+}
 
 export default function Home() {
   const [count, setCount] = useState<number | null>(null);
@@ -15,7 +23,7 @@ export default function Home() {
 
     const fetchCount = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/counter`);
+        const response = await apiFetch("/api/counter");
         if (!response.ok) {
           throw new Error(`Request failed with status ${response.status}`);
         }
@@ -24,9 +32,9 @@ export default function Home() {
           setCount(value);
           setError(null);
         }
-      } catch {
+      } catch (fetchError) {
         if (!isCancelled) {
-          setError("Could not reach the backend.");
+          setError(isNotAuthenticated(fetchError) ? SIGN_IN_ERROR : BACKEND_ERROR);
         }
       } finally {
         if (!isCancelled) {
@@ -46,15 +54,15 @@ export default function Home() {
     setIsIncrementing(true);
     setError(null);
     try {
-      const response = await fetch(`${API_URL}/api/counter/increment`, {
+      const response = await apiFetch("/api/counter/increment", {
         method: "POST",
       });
       if (!response.ok) {
         throw new Error(`Request failed with status ${response.status}`);
       }
       setCount((await response.json()) as number);
-    } catch {
-      setError("Could not increment the counter.");
+    } catch (incrementError) {
+      setError(isNotAuthenticated(incrementError) ? SIGN_IN_ERROR : INCREMENT_ERROR);
     } finally {
       setIsIncrementing(false);
     }
