@@ -1,11 +1,7 @@
-Här är hela uppdaterade `ARCHITECTURE.md`. Ändringar markerade i slutet.
-
----
-
-```markdown
 # Architecture & Design System — Podplayer
 
 ## 1. Overview & Goals
+
 A web-based podcast player focused on a disciplined, clean user experience with support for personal subscriptions, playback history, and cross-device playback progress synchronization.
 
 ---
@@ -16,18 +12,21 @@ A web-based podcast player focused on a disciplined, clean user experience with 
 - **Framework:** Next.js (App Router, TypeScript)
 - **Styling:** Tailwind CSS v4 + Radix UI Primitives (headless)
 - **Hosting:** GitHub Pages (Static Site Generation / SSG via `output: 'export'`)
-- **Domain:** `podplayer.kruskopf.org` (Cloudflare CNAME pointing to GitHub Pages)
+- **Domain:** `podplayer.kruskopf.org` (Cloudflare CNAME pointing to GitHub Pages, DNS-only / gray cloud)
 
 ### Backend
 - **Framework:** Java 25, Spring Boot 4.x (Web MVC, Data JPA, PostgreSQL Driver)
 - **Deployment:** Containerized (`Dockerfile`) hosted on Google Cloud Run
-- **Domain:** `podplayer-api.kruskopf.org` (or `api.podplayer.kruskopf.org`) configured as DNS-only / gray cloud in Cloudflare to bypass nested wildcard SSL constraints
-- **CORS:** Allowed origins: `https://podplayer.kruskopf.org` and `http://localhost:3000` (development)
+- **Domain:** `podplayer-api.kruskopf.org` (Cloudflare CNAME pointing to `ghs.googlehosted.com`, DNS-only / gray cloud)
+- **CORS:** Allowed origins configured via the `CORS_ALLOWED_ORIGINS` environment variable. Never hardcoded in source.
 
 ### Database & Auth
 - **Provider:** Supabase (Managed PostgreSQL)
 - **Auth:** Google OAuth via Supabase Auth; backend verifies JWT against an allowlist of permitted emails
-- **Data Access:** Spring Boot connects to Supabase PostgreSQL via standard JDBC/JPA using the Session Pooler endpoint (IPv4) with `?sslmode=require&prepareThreshold=0`
+- **Data Access:** Spring Boot connects via the **Transaction Pooler** endpoint (port `6543`, IPv4) with `?sslmode=require&prepareThreshold=0`. Transaction Pooler is preferred over Session Pooler because Session Pooler has a hard 15-client limit that Cloud Run autoscaling can exceed. Hikari pool size is capped at 3 connections per instance (5 instances × 3 = 15, safely within the pooler's limits).
+
+### Infrastructure Reference
+Detailed configuration for Cloud Run, Cloudflare DNS, and secret locations lives in `infra/`. See `infra/README.md` for the index.
 
 ---
 
@@ -38,9 +37,10 @@ podplayer/
 ├── frontend/             # Next.js client (SSG)
 ├── backend/              # Spring Boot REST API
 ├── shared/               # Shared API contracts, DTO schemas, OpenAPI specs
+├── infra/                # Infrastructure reference docs (Cloud Run, DNS, secrets)
+├── docs/                 # Extended design docs (style guide, etc.)
 ├── .github/workflows/    # CI/CD pipelines (frontend Pages deploy & backend Cloud Run build)
 ├── ARCHITECTURE.md       # This document
-├── STYLEGUIDE.md         # Extended style guide (may be folded into §4 over time)
 ├── .clinerules           # Machine-readable rules for AI assistants
 └── README.md             # Project quickstart
 ```
@@ -194,8 +194,9 @@ No component code changes.
 3. **Shape Rule Enforcement:** Enforce `rounded-none` by default. Only designated focal elements (play trigger, avatar, scrubber thumb) may use `rounded-full`. Never intermediate radii.
 4. **Environment Isolation:** Never commit secrets. Backend configuration consumes environment variables for Supabase credentials. Env files live per-app: `backend/.env` (Spring), `frontend/.env.local` (Next). Root `.env` is reserved for tooling run from the repo root.
 5. **No Datasource Defaults:** `backend/src/main/resources/application.yaml` must not contain default values for `SPRING_DATASOURCE_*`; missing env vars should fail fast on startup.
-6. **Contract First:** When creating or modifying backend DTOs or endpoints, update the client-side fetchers and TypeScript interfaces to maintain end-to-end synchronization.
-7. **Source of Truth for Versions:** Trust `backend/pom.xml` and `frontend/package.json` over this document when they disagree. Update this document rather than the code when a discrepancy is found.
+6. **No Hardcoded Domains in Source:** CORS origins, backend URLs, and similar environment-specific values must be read from environment variables. Default values in `application.yaml` are permitted only for local development (`http://localhost:3000`).
+7. **Contract First:** When creating or modifying backend DTOs or endpoints, update the client-side fetchers and TypeScript interfaces to maintain end-to-end synchronization.
+8. **Source of Truth for Versions:** Trust `backend/pom.xml` and `frontend/package.json` over this document when they disagree. Update this document rather than the code when a discrepancy is found.
 
 ---
 
@@ -206,68 +207,25 @@ No component code changes.
   * `backend/` initialized (Spring Boot 4.x, Java 25, Web MVC, Data JPA, Postgres)
   * Tailwind 4 token layer configured in `frontend/app/globals.css`
 
-* [ ] **Step 2: Database, Walking Skeleton & Auth**
-  * [x] Provision Supabase project and verify JDBC connectivity via Session Pooler
-  * [x] Walking skeleton: `/api/counter` GET + `/increment` POST persisted to Supabase
-  * [ ] Google OAuth login and backend JWT verification against an email allowlist
+* [x] **Step 2: Deployment & CI/CD**
+  * Frontend deployed to GitHub Pages (`podplayer.kruskopf.org`), CI/CD via GitHub Actions
+  * Backend deployed to Cloud Run (`podplayer-api.kruskopf.org`), CI/CD via GitHub Actions
+  * Cloudflare DNS records set to DNS-only (gray cloud) for both subdomains
+  * SSL managed by GitHub Pages and Cloud Run (Let's Encrypt, auto-renewed)
+  * Workload Identity Federation configured between GitHub Actions and GCP (no long-lived keys)
+  * Hikari pool capped at 3 connections per instance; Transaction Pooler (port 6543) used
 
-* [ ] **Step 3: CI/CD Workflows**
-  * GitHub Action for frontend static build and GitHub Pages deployment (`paths: ['frontend/**']`)
-  * Backend `Dockerfile` and automated build pipeline for Google Cloud Run (`paths: ['backend/**']`)
-  * Cloudflare DNS records and SSL parameters verified (DNS-only / gray cloud for both subdomains)
+* [ ] **Step 3: Auth & Access Control**
+  * Google OAuth login (frontend)
+  * Backend JWT verification against an email allowlist
+  * Protected endpoints reject unauthenticated requests
 
 * [ ] **Step 4: Core Feature Implementation**
   * RSS feed ingestion & podcast episode parsing
   * Audio playback engine, media session integration, and mini/full player views
   * Playback progress tracking and cross-device state synchronization via Spring Boot
-```
 
----
-
-## Vad som ändrades jämfört med din version
-
-**§2 Backend & Database**
-- Fixade `Spring Boot 4.x` → behöll, men ändrade `Web` → `Web MVC` för att matcha `spring-boot-starter-webmvc` i pom.xml.
-- Lade till Session Pooler-detaljer (`sslmode=require&prepareThreshold=0`) — det är en icke-trivial detalj som annars glöms.
-- Uppdaterade Auth från "Supabase Auth (Email/Password, Magic Link, OAuth)" till "Google OAuth via Supabase Auth; backend verifierar JWT mot allowlist" — matchar din faktiska plan.
-
-**§3 Repository Structure**
-- `podcast-player/` → `podplayer/` (matchar repo-namnet).
-- `ARCHITECTURE.md` (fixade typot).
-- Lade till `STYLEGUIDE.md` och `.clinerules` i trädet.
-
-**§4.1 Concept**
-- Lade till meningen om att Zorn är default men att systemet stödjer flera teman.
-
-**§4.2**
-- Rubriken ändrad från `Color Palette` → `Zorn Palette` (eftersom den nu är ett tema bland flera).
-
-**§4.5 CSS-exempel**
-- Bytte ut `--zorn-*`-blocket mot exakt det som finns i din faktiska `globals.css`. Nu är dokument och kod i synk.
-
-**§4.6 Theme Switching** (helt nytt avsnitt)
-- Dokumenterar `data-theme` + `data-mode`-strategin.
-- Uttrycklig regel: **aldrig `dark:` i komponenter**.
-- FOUC-strategi.
-- Hur nya teman läggs till.
-
-**§5 Engineering Principles**
-- Regel 1: utökad med "no `dark:` variant, no `zorn-*` in components".
-- Regel 4: uppdaterad med per-app env-fil-modellen.
-- Regel 5: helt ny — "No Datasource Defaults".
-- Regel 7: helt ny — "Trust pom.xml/package.json over this doc".
-
-**§6 Roadmap**
-- Steg 1 markerat `[x]`.
-- Steg 2 utökat med walking skeleton (klart) och Auth (kvar).
-- Steg 3–4 orörda, men konsekvent formatering.
-
----
-
-Committa `ARCHITECTURE.md` + `globals.css` + `pom.xml` + `application.yaml` i en gemensam commit, t.ex.:
-
-```
-docs+refactor: theme-agnostic tokens, remove DB defaults, sync architecture doc
-```
-
-Då har du en ren checkpoint att gå vidare från — och nästa steg blir punkt 3 i roadmappen (CI/CD + Cloud Run), eller Auth om du vill ha den på plats först.
+* [ ] **Step 5: Long-term Maintenance**
+  * Migrate `SPRING_DATASOURCE_PASSWORD` (and eventually all datasource values) to GCP Secret Manager, referenced via `--set-secrets` in the deploy workflow
+  * Replace `ddl-auto: update` with `validate` and introduce Flyway migrations
+  * Migrate to `originPatterns` in CORS config once preview deploys (Cloudflare Pages / Vercel / Netlify) are added
