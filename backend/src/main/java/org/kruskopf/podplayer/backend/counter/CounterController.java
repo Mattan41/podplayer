@@ -1,22 +1,12 @@
 package org.kruskopf.podplayer.backend.counter;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Minimal walking-skeleton REST endpoint used to verify that the Next.js
- * frontend, this Spring Boot backend and the Supabase PostgreSQL database
- * can talk to each other end to end.
- */
 @RestController
 @RequestMapping("/api/counter")
-@CrossOrigin(origins = {
-        "http://localhost:3000",
-        "https://podplayer.kruskopf.org"
-})
 public class CounterController {
 
     private static final long COUNTER_ID = 1L;

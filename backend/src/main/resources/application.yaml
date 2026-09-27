@@ -14,6 +14,7 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
 server:
   port: 8080
