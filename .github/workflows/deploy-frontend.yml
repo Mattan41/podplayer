@@ -39,6 +39,8 @@ jobs:
 
       - name: Build static site
         run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: https://podplayer-api.kruskopf.org
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
