@@ -44,3 +44,70 @@ To set up locally, copy the example file and fill in the values:
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env.local
 ```
+
+## Manual Steps After First Deploy
+
+These steps are performed **manually** against the Supabase project. They are deliberately not automated because they contain or depend on a personal e-mail address, which must not enter Git history. Perform them once per fresh Supabase project — for new-developer onboarding or after a disaster-recovery rebuild.
+
+### 1. Enable Row Level Security
+
+Flyway creates `allowed_users`, `counter`, and `flyway_schema_history` in the `public` schema. Supabase exposes `public` through PostgREST, so enable Row Level Security on all three:
+
+```sql
+ALTER TABLE allowed_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE counter ENABLE ROW LEVEL SECURITY;
+ALTER TABLE flyway_schema_history ENABLE ROW LEVEL SECURITY;
+```
+
+Then add a deny-all policy for the `anon` and `authenticated` roles that PostgREST uses. The backend is unaffected: it connects over JDBC as the `postgres` role, which bypasses RLS.
+
+```sql
+CREATE POLICY "Deny anon access" ON allowed_users
+    FOR ALL TO anon, authenticated
+    USING (false) WITH CHECK (false);
+
+CREATE POLICY "Deny anon access" ON counter
+    FOR ALL TO anon, authenticated
+    USING (false) WITH CHECK (false);
+
+CREATE POLICY "Deny anon access" ON flyway_schema_history
+    FOR ALL TO anon, authenticated
+    USING (false) WITH CHECK (false);
+```
+
+> **Required before the frontend anon key is deployed.** The anon key is public — it is shipped to every browser. RLS is the only thing preventing unauthorised reads through PostgREST.
+
+### 2. Insert the First Administrator
+
+The allowlist starts empty and `/api/admin/users` requires an existing admin, so the first administrator can only be bootstrapped here:
+
+```sql
+INSERT INTO allowed_users (email, role, note, created_by)
+VALUES ('<your-email>', 'ADMIN', 'Owner', 'bootstrap');
+```
+
+Replace `<your-email>` with the real Google account address that will sign in via Supabase Auth. Use the same address Supabase places in the JWT `email` claim — the backend normalises it by trimming and lower-casing.
+
+### 3. Configure Supabase Auth URL Settings
+
+In the Supabase dashboard, under **Authentication → URL Configuration**:
+
+| Setting | Value |
+| --- | --- |
+| Site URL | Production frontend URL, e.g. `https://podplayer.kruskopf.org` |
+| Redirect URLs | Both `https://podplayer.kruskopf.org` and `http://localhost:3000` |
+
+### 4. Verify
+
+All three tables must report `relrowsecurity = t`:
+
+```sql
+SELECT relname, relrowsecurity FROM pg_class
+WHERE relname IN ('allowed_users', 'counter', 'flyway_schema_history');
+```
+
+The administrator row must be present:
+
+```sql
+SELECT email, role FROM allowed_users;
+```
