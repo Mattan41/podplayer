@@ -9,3 +9,4 @@ Always read and strictly follow ARCHITECTURE.md before planning or modifying cod
 - Theme tokens: components use bg-bg / text-fg / border-fg / bg-accent / bg-cta only. Never hex values or palette names in TSX.
 - Roadmap in ARCHITECTURE.md may lag behind reality; trust pom.xml and package.json versions.
 - All code, comments, Javadoc, documentation, commit messages and file content must be written in English, regardless of the language used in the conversation.
+- When behavior, structure or an API changes, update the documentation that describes it in the same change.
