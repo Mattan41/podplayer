@@ -166,6 +166,8 @@ Themes are applied via `data-*` attributes on `<html>`:
 4. **FOUC prevention:** A small inline script in `app/layout.tsx` (inside `<head>`) reads the persisted preference (e.g. `localStorage.theme` / `localStorage.mode`) and, if absent, falls back to `prefers-color-scheme`, then sets the `data-*` attributes on `<html>` before React hydrates.
 5. **Switching at runtime:** Changing the theme is a matter of updating the `data-*` attributes on the `<html>` element. No component re-render is required; CSS variables cascade automatically.
 
+The runtime implementation lives in `frontend/lib/theme-context.tsx`: a `ThemeProvider` that exposes `useTheme()`, hardcodes the `zorn` theme, and switches only the mode. Palette switching between themes is deliberately not built until a second theme exists. See `docs/DECISIONS.md` entry 13.
+
 **Adding a new theme** (e.g. `mono`, `kid`) requires only:
 
 ```css

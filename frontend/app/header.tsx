@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
 import { BaseButton } from "@/components/base";
 
 export default function Header() {
   const { user, role, isLoading, signOut } = useAuth();
+  const { mode, toggleMode } = useTheme();
 
   const signIn = async () => {
     await supabase.auth.signInWithOAuth({
@@ -41,6 +43,9 @@ export default function Header() {
         ) : (
           <BaseButton onClick={() => void signIn()}>Sign in with Google</BaseButton>
         )}
+        <BaseButton variant="outline" size="sm" onClick={toggleMode}>
+          {mode === "light" ? "Dark" : "Light"}
+        </BaseButton>
       </div>
     </header>
   );

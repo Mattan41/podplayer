@@ -82,6 +82,11 @@ Yellow Ochre `accent` on Flake White `bg` at **2.30:1** in light mode, below the
 `outline-accent`, so light-mode focus indicators are weaker than that guideline
 asks for. Dark mode is fine at 8.18:1. Not addressed here.
 
+**Correction (see entry 14).** The dark rows above were computed from the token
+values, not rendered, because no runtime switch set `data-mode` until entry 13.
+Entry 14 re-measures every pair in a rendered Chrome and confirms them to two
+decimals. The light-mode Vermilion gap remains as recorded.
+
 ## 4. Removing an allowlist entry has no confirmation
 
 **Context.** `Remove` deletes an entry immediately on click. The action is
@@ -142,6 +147,10 @@ entry was written: `focus:outline-none` overrode the outline style that `outline
 relies on, so the colour measured here had no visible effect. The measurements still
 hold, and they became observable when the missing `focus-visible:outline-solid` was
 added in entry 8.
+
+**Correction (see entry 14).** The dark ratios above (`cta` 4.99:1, `accent`
+8.18:1) were computed from token values, not rendered, until entry 13 wired the
+mode switch. Entry 14 re-measures them in a browser and confirms both.
 
 ## 6. Corner radius is a skin property, exposed as `--theme-radius`
 
@@ -214,6 +223,10 @@ values were kept.
 **Scope.** Only `BaseField` uses `text-muted` so far. The remaining 14 `text-fg/70`
 occurrences are in the pages, and they disappear as the pages are migrated in
 Phases 2 and 3.
+
+**Correction (see entry 14).** The dark ratio above (`7.81:1`) was computed from
+the token value, not rendered, until entry 13 wired the mode switch. Entry 14
+re-measures it in a browser and confirms it.
 
 ## 8. `focus-visible:outline-solid` is required for the focus ring to paint
 
@@ -411,3 +424,88 @@ the rule is enforced, and `next build` is not the thing enforcing it.
 so no warning-only pass exists to suppress. Adding `--max-warnings=0` would
 have no effect today, and would give a false sense of stricter enforcement
 if a future rule is added at `warn` and meant to be non-blocking.
+
+## 13. Dark mode is a mode attribute, not a second theme
+
+**Context.** `frontend/app/globals.css` has carried a
+`[data-theme="zorn"][data-mode="dark"]` token block since the token layer
+existed, and `ARCHITECTURE.md` §4.6 specifies an inline FOUC script, but nothing
+ever set `data-mode` and dark mode was unreachable at runtime.
+
+**Decision.** Mode is orthogonal to theme. A theme selects a palette family
+(`zorn`, later `mono`), and a mode selects the light or dark block inside it, so
+one theme owns both modes and `mode` is a second attribute rather than a second
+theme. `frontend/lib/theme-context.tsx` therefore hardcodes `zorn` and exposes
+only `{ mode, toggleMode }`. The switch writes `data-theme` and `data-mode` on
+`<html>`, persists the mode under `localStorage.mode`, and notifies subscribers.
+
+**Why an inline script, not a React effect.** A `useEffect` runs after the
+bundle has been fetched, parsed and committed, which is after the first paint.
+Reading the preference there would paint the light canvas first and the dark one
+a frame or more later — the flash the mechanism exists to prevent. The script in
+`app/layout.tsx` runs synchronously while `<head>` is parsed, before the body
+exists, so the correct token block applies to the first painted frame.
+
+**Why the provider reads the DOM, not `localStorage`.** The inline script is the
+single place that resolves the persisted preference and the
+`prefers-color-scheme` fallback. A second reader could disagree with it, and the
+disagreement would surface as a one-frame flash. The provider instead treats
+`<html data-mode>` as an external store and subscribes with
+`useSyncExternalStore`, which is also what `react-hooks/set-state-in-effect`
+requires of a component that synchronises with an external system.
+
+**Consequence.** `<html>` must not declare `data-theme` or `data-mode` in JSX:
+React would overwrite the script's work during hydration. The script is the only
+statement of the initial attributes. The toggle's label is server-rendered as
+"Dark" and corrected to "Light" after hydration when the script resolved dark,
+so only text flips, never colour. `data-mode` drives the CSS cascade, so no
+component re-render is needed for the colours to change.
+
+**Measured (headless Chrome).** With `localStorage` empty and
+`prefers-color-scheme: dark`, the DOM probe registered at the earliest moment
+`document.body` existed — before React hydrated — reported `mode=dark`,
+`bg=rgb(26, 23, 20)`. The full matrix, the toggle round-trip and the persistence
+test are in entry 14's phase report; the contrast consequences are in entry 14.
+
+**Serialization note.** Next emits its own `<meta>`, `<title>`, preloads and
+async bundle tags into `<head>` ahead of the layout-rendered `<script>`, so the
+script is inside `<head>` but not literally its first child in the exported
+HTML. It is still synchronous and still runs before the body and before any
+React bundle executes, which is the property that matters.
+
+## 14. Contrast re-measured in a rendered browser
+
+**Context.** Entries 3, 5 and 7 computed light- and dark-mode ratios from the
+token values in `globals.css`. The light values were later observed in a
+browser; the dark values could not be, because entry 13 had not yet wired
+`data-mode` to anything and dark mode was unreachable.
+
+**Method.** `frontend/out/` was served over HTTP and driven by headless Chrome
+(154.0.8037.57). The mode was set from `localStorage`/`matchMedia` at
+document-start, the tokens were read with
+`getComputedStyle(document.documentElement).getPropertyValue("--theme-*")`, and
+the painted surface with `getComputedStyle(document.body)`. Ratios use the same
+WCAG 2.1 relative luminance formula as entry 3; the sanity pair black on white
+returned **21.00:1**, as expected. Painted backgrounds matched the tokens:
+light `rgb(241, 234, 217)`, dark `rgb(26, 23, 20)`.
+
+| Pair | Light | Dark | Threshold |
+| --- | --- | --- | --- |
+| `fg` on `bg` | 13.95:1 | 14.88:1 | AA 4.5:1 — pass both |
+| `muted` on `bg` | 5.63:1 | 7.81:1 | AA 4.5:1 — pass both |
+| `cta` on `bg` | 4.27:1 | 4.99:1 | AA 4.5:1 — **fail light**, pass dark |
+| `bg` on `cta` (fill/hover) | 4.27:1 | 4.99:1 | AA 4.5:1 — **fail light**, pass dark |
+| `accent` on `bg` (context) | 2.30:1 | 8.18:1 | 1.4.11 3:1 — **fail light**, pass dark |
+
+`bg` on `cta` is the same pair as `cta` on `bg` read in the other direction, so
+the `cta` variant's fill and its hover inversion share one ratio. Focus rings
+were also re-measured: the toggle paints `outline: 2px solid rgb(193, 68, 14)`
+at `outline-offset: 2px` in light mode and `rgb(224, 96, 42)` in dark mode, both
+the `cta` token, with `:focus-visible` matching in both.
+
+**Result.** Every measured value agrees with entries 3, 5 and 7 to two decimals.
+No token was changed; the light-mode Vermilion gap (4.27:1) remains the accepted
+limitation recorded in entry 3. The dark-mode ratios are now rendered
+measurements rather than calculations.
+
+

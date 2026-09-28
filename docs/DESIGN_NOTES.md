@@ -177,6 +177,32 @@ Two consequences that are easy to forget:
 
 ---
 
+## FOUC-safe initialization is an inline script, not an effect
+
+Any visual state that depends on a persisted preference must be resolved before
+the first paint, and React cannot do that: a `useEffect` runs after the bundle
+has been fetched, parsed and committed, which is after the first frame. The
+project handles this with a synchronous inline script in `<head>` that reads
+`localStorage`, falls back to `prefers-color-scheme`, and writes the `data-*`
+attributes on `<html>` (`DECISIONS.md` entry 13). The React provider then reads
+the DOM instead of re-deriving the value.
+
+Two details worth remembering when copying the pattern:
+
+- **Never render from JSX the same attribute the script sets.** React overwrites
+  attributes it owns during hydration, which would undo the script's work.
+  `<html>` declares neither `data-theme` nor `data-mode`.
+- **"First child of `<head>`" is about execution order, not markup order.** Next
+  emits its own meta, title, preload and bundle tags ahead of a layout-rendered
+  script, so it is not literally first in the exported HTML. What matters is that
+  it is synchronous and inside `<head>`, so it runs before the body and before
+  any React bundle.
+
+The general rule: resolve pre-paint state in the document, and treat the DOM
+attribute as the source of truth for the component tree.
+
+---
+
 ## On AI-assisted development
 
 This project is built with AI assistance (Cline, Claude, ChatGPT/DeepSeek).
