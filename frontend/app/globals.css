@@ -33,6 +33,10 @@
  * utility, so a skin can change the corner radius without any component
  * changing. Fully circular focal elements (play button, avatar, scrubber
  * handle) use rounded-full explicitly and are deliberately not affected.
+ *
+ * Muted (secondary) text is a token rather than an opacity utility such as
+ * text-fg/70, so a skin can tint it independently instead of always deriving it
+ * from the foreground.
  */
 
 :root {
@@ -41,6 +45,7 @@
   --theme-fg: #211d1a;     /* Ivory Black */
   --theme-accent: #c69328; /* Yellow Ochre */
   --theme-cta: #c1440e;    /* Vermilion */
+  --theme-muted: #5f5b53;  /* Secondary text: fg composited 70% over bg */
   --theme-radius: 0px;     /* Shape is a theme property, see docs/DECISIONS.md */
 }
 
@@ -49,6 +54,7 @@
   --theme-fg: #211d1a;
   --theme-accent: #c69328;
   --theme-cta: #c1440e;
+  --theme-muted: #5f5b53;
   --theme-radius: 0px;
 }
 
@@ -58,13 +64,15 @@
  * to preserve contrast against the darker canvas.
  *
  * Radius is a property of the skin, not of the mode, so it is inherited
- * unchanged from the light block above.
+ * unchanged from the light block above. Muted text does depend on both the
+ * foreground and the background, so it is redefined here.
  */
 [data-theme="zorn"][data-mode="dark"] {
   --theme-bg: #1a1714;
   --theme-fg: #f1ead9;
   --theme-accent: #d9a83e;
   --theme-cta: #e0602a;
+  --theme-muted: #b1ab9e;
 }
 
 @theme inline {
@@ -72,6 +80,7 @@
   --color-fg: var(--theme-fg);
   --color-accent: var(--theme-accent);
   --color-cta: var(--theme-cta);
+  --color-muted: var(--theme-muted);
   --radius-base: var(--theme-radius);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);

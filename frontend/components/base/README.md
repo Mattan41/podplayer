@@ -13,7 +13,8 @@ mobile layout bug in the admin allowlist went unnoticed: styling lived in pages
 instead of in components.
 
 Shared controls now live here, styled only through the semantic theme tokens
-(`bg-bg`, `text-fg`, `border-fg`, `text-cta`, `bg-cta`, `outline-cta`). No hex
+(`bg-bg`, `text-fg`, `text-muted`, `border-fg`, `text-cta`, `bg-cta`,
+`outline-cta`). No hex
 values, no palette names, no Tailwind `dark:` variant.
 
 ## Components
@@ -90,7 +91,7 @@ Separation is a 1px border rather than a shadow, per `ARCHITECTURE.md` §4.4.
 | `children` | `ReactNode` | – |
 | `className` | `string` | – |
 
-Renders a `<label>` with a muted `text-xs` caption above the control:
+Renders a `<label>` with a muted (`text-muted`) `text-xs` caption above the control:
 
 ```tsx
 <BaseField label="Email">
@@ -152,6 +153,11 @@ Radix Select was not used.
 Only semantic theme tokens. Never a hex value, never a palette name (`zorn-*`),
 never Tailwind's `dark:` variant. Dark mode is a property of the theme, not of the
 component; see `ARCHITECTURE.md` §4.6.
+
+Secondary text uses `text-muted`, never an opacity utility such as `text-fg/70`. The
+token holds a pre-computed value per theme and mode, so a skin can tint muted text
+independently and its contrast is a deliberate choice rather than a side effect of
+`fg`. See `docs/DECISIONS.md` entry 7 for the measured ratios.
 
 `rounded-base` on every rectangular surface and control. It resolves through the
 theme radius (`--theme-radius`), which Zorn sets to `0px`, so a skin can change

@@ -18,7 +18,7 @@ export type BaseFieldProps = {
 export function BaseField({ label, children, className }: BaseFieldProps) {
   return (
     <label className={cn("flex flex-col gap-1", className)}>
-      <span className="text-xs tracking-widest text-fg/70">{label}</span>
+      <span className="text-xs tracking-widest text-muted">{label}</span>
       {children}
     </label>
   );

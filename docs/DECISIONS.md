@@ -173,3 +173,38 @@ the mode.
 `border-radius: 0` as a fixed property of the design language. Those statements now
 describe Zorn's value rather than a system rule, and are worth rewording in a future
 documentation pass.
+
+## 7. Muted text is a token, not `text-fg/70`
+
+**Context.** Secondary text was written as `text-fg/70` in 15 places. That follows the
+theme indirectly, but it always derives from the foreground, so a skin cannot tint
+secondary text independently, and its contrast is a side effect rather than a choice.
+
+**Decision.** Add `--theme-muted`, mapped to `--color-muted`, and use `text-muted`.
+The values are the composite of `fg` at 70% over `bg`, rounded to the nearest 8-bit
+channel, so rendering stays as close to the previous output as 8-bit color allows.
+
+**Consequence — measured ratios.**
+
+| Mode | Token | Ratio on `bg` | AA (4.5:1) |
+| --- | --- | --- | --- |
+| Light | `--theme-muted: #5f5b53` | 5.63:1 | pass |
+| Dark | `--theme-muted: #b1ab9e` | 7.81:1 | pass |
+
+**Verification.** `text-fg/70` compiles to
+`color-mix(in oklab, var(--theme-fg) 70%, transparent)`, which resolves to the
+foreground color at 0.7 alpha, composited over the backdrop in sRGB. Compositing
+`fg` at 70% over `bg` in a browser canvas produced `rgb(95, 90, 83)` in light mode
+against the token's `rgb(95, 91, 83)`, and `rgb(176, 170, 158)` in dark mode against
+`rgb(177, 171, 158)`.
+
+The residual difference is therefore one step in one or two 8-bit channels, which is
+below the threshold of perception and sits inside the rounding ambiguity of the 0.5
+boundaries involved (light green and dark red both land exactly on a half step).
+Exact-parity alternatives would be `#5f5a53` and `#b0aa9e`, but those encode one
+browser's truncation rather than the nearest representable value, so the rounded
+values were kept.
+
+**Scope.** Only `BaseField` uses `text-muted` so far. The remaining 14 `text-fg/70`
+occurrences are in the pages, and they disappear as the pages are migrated in
+Phases 2 and 3.
