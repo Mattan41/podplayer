@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { apiFetch } from "@/lib/api";
 import { useAuth, type UserRole } from "@/lib/auth-context";
+import { BaseButton, BaseCard, BaseField, BaseInput, BaseSelect } from "@/components/base";
 
 type AllowedUser = {
   email: string;
@@ -13,15 +14,10 @@ type AllowedUser = {
   createdBy: string | null;
 };
 
-const LABEL_CLASS = "text-xs tracking-widest text-fg/70";
+const TABLE_HEADING_CLASS = "px-6 py-3 text-xs font-normal tracking-widest text-muted";
 
-const INPUT_CLASS =
-  "rounded-none border border-fg bg-bg px-3 py-2 text-sm text-fg focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
-
-const CTA_BUTTON_CLASS =
-  "cursor-pointer rounded-none border-2 border-cta bg-cta px-3 py-1 font-mono text-xs tracking-wide text-bg transition-colors hover:bg-bg hover:text-cta focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50";
-
-const HEADING_CLASS = "px-6 py-3 text-xs font-normal tracking-widest text-fg/70";
+/** Caption style for the definition terms in the mobile card list. */
+const CARD_TERM_CLASS = "text-xs tracking-widest text-muted";
 
 function formatTimestamp(value: string | null): string {
   if (!value) {
@@ -129,7 +125,7 @@ export default function AdminPage() {
   if (isLoading) {
     return (
       <main className="flex flex-1 items-center justify-center p-8">
-        <p className="text-sm text-fg/70">Loading…</p>
+        <p className="text-sm text-muted">Loading…</p>
       </main>
     );
   }
@@ -137,124 +133,160 @@ export default function AdminPage() {
   if (!isAdmin) {
     return (
       <main className="flex flex-1 items-center justify-center p-8">
-        <section className="w-full max-w-md rounded-none border border-fg bg-bg p-8">
+        <BaseCard className="w-full max-w-md p-8">
           <h1 className="font-mono text-2xl">Access denied</h1>
-          <p className="mt-2 text-sm text-fg/70">
+          <p className="mt-2 text-sm text-muted">
             This page requires the ADMIN role. Sign in with an allowlisted administrator account.
           </p>
-        </section>
+        </BaseCard>
       </main>
     );
   }
 
   return (
     <main className="flex flex-1 flex-col gap-8 p-8">
-      <section className="rounded-none border border-fg bg-bg p-6">
+      <BaseCard className="p-6">
         <h1 className="font-mono text-2xl">Users</h1>
-        <p className="mt-1 text-sm text-fg/70">
+        <p className="mt-1 text-sm text-muted">
           Add a new entry or update an existing one by submitting its e-mail address.
         </p>
 
         <form onSubmit={submit} className="mt-6 grid gap-4 sm:grid-cols-2">
-          <label className="flex flex-col gap-1">
-            <span className={LABEL_CLASS}>Email</span>
-            <input
+          <BaseField label="Email">
+            <BaseInput
               type="email"
               required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className={INPUT_CLASS}
             />
-          </label>
+          </BaseField>
 
-          <label className="flex flex-col gap-1">
-            <span className={LABEL_CLASS}>Role</span>
-            <select
+          <BaseField label="Role">
+            <BaseSelect
               value={newRole}
               onChange={(event) => setNewRole(event.target.value as UserRole)}
-              className={INPUT_CLASS}
             >
               <option value="USER">USER</option>
               <option value="ADMIN">ADMIN</option>
-            </select>
-          </label>
+            </BaseSelect>
+          </BaseField>
 
-          <label className="flex flex-col gap-1">
-            <span className={LABEL_CLASS}>Note</span>
-            <input
+          <BaseField label="Note">
+            <BaseInput
               type="text"
               value={note}
               onChange={(event) => setNote(event.target.value)}
-              className={INPUT_CLASS}
             />
-          </label>
+          </BaseField>
 
-          <label className="flex flex-col gap-1">
-            <span className={LABEL_CLASS}>Expires at</span>
-            <input
+          <BaseField label="Expires at">
+            <BaseInput
               type="datetime-local"
               value={expiresAt}
               onChange={(event) => setExpiresAt(event.target.value)}
-              className={INPUT_CLASS}
             />
-          </label>
+          </BaseField>
 
           <div className="sm:col-span-2">
-            <button type="submit" className={CTA_BUTTON_CLASS}>
+            <BaseButton variant="cta" type="submit">
               Save
-            </button>
+            </BaseButton>
           </div>
         </form>
-      </section>
+      </BaseCard>
 
-      <section className="rounded-none border border-fg bg-bg">
+      <BaseCard>
         <div className="flex items-center justify-between border-b border-fg px-6 py-3">
           <h2 className="font-mono text-lg">Allowlist</h2>
-          {isLoadingUsers ? <span className="text-xs text-fg/70">Loading…</span> : null}
+          {isLoadingUsers ? <span className="text-xs text-muted">Loading…</span> : null}
         </div>
 
-        {error ? <p className="border-b border-fg px-6 py-3 text-sm text-fg">{error}</p> : null}
+        {error ? <p className="border-b border-fg px-6 py-3 text-sm">{error}</p> : null}
 
-        <table className="w-full border-collapse text-left text-sm">
+        {/*
+         * One entry list, two layouts. The table is `display: none` below md and
+         * the card list is `display: none` from md upwards, so only one of them is
+         * ever laid out. Nothing is hidden with opacity: that would keep the
+         * overflowing table in the layout and keep the page scrolling sideways.
+         * See docs/DECISIONS.md entry 9.
+         */}
+        <table className="hidden w-full border-collapse text-left text-sm md:table">
           <thead>
             <tr className="border-b border-fg">
-              <th className={HEADING_CLASS}>Email</th>
-              <th className={HEADING_CLASS}>Role</th>
-              <th className={HEADING_CLASS}>Note</th>
-              <th className={HEADING_CLASS}>Expires at</th>
-              <th className={HEADING_CLASS}>Created at</th>
-              <th className={HEADING_CLASS} />
+              <th className={TABLE_HEADING_CLASS}>Email</th>
+              <th className={TABLE_HEADING_CLASS}>Role</th>
+              <th className={TABLE_HEADING_CLASS}>Note</th>
+              <th className={TABLE_HEADING_CLASS}>Expires at</th>
+              <th className={TABLE_HEADING_CLASS}>Created at</th>
+              <th className={TABLE_HEADING_CLASS} />
             </tr>
           </thead>
           <tbody>
             {users.map((user) => (
               <tr key={user.email} className="border-b border-fg last:border-b-0">
-                <td className="px-6 py-3 font-mono">{user.email}</td>
+                <td className="px-6 py-3 font-mono break-all">{user.email}</td>
                 <td className="px-6 py-3">{user.role}</td>
-                <td className="px-6 py-3 text-fg/70">{user.note ?? "–"}</td>
-                <td className="px-6 py-3 text-fg/70">{formatTimestamp(user.expiresAt)}</td>
-                <td className="px-6 py-3 text-fg/70">{formatTimestamp(user.createdAt)}</td>
+                <td className="px-6 py-3 text-muted">{user.note ?? "–"}</td>
+                <td className="px-6 py-3 text-muted">{formatTimestamp(user.expiresAt)}</td>
+                <td className="px-6 py-3 text-muted">{formatTimestamp(user.createdAt)}</td>
                 <td className="px-6 py-3 text-right">
-                  <button
-                    type="button"
-                    onClick={() => void remove(user.email)}
-                    className={CTA_BUTTON_CLASS}
-                  >
+                  <BaseButton variant="danger" size="sm" onClick={() => void remove(user.email)}>
                     Remove
-                  </button>
+                  </BaseButton>
                 </td>
               </tr>
             ))}
             {users.length === 0 && !isLoadingUsers ? (
               <tr>
-                <td colSpan={6} className="px-6 py-6 text-sm text-fg/70">
+                <td colSpan={6} className="px-6 py-6 text-sm text-muted">
                   No allowlist entries yet.
                 </td>
               </tr>
             ) : null}
           </tbody>
         </table>
-      </section>
+
+        <ul className="md:hidden">
+          {users.map((user) => (
+            <li key={user.email} className="border-b border-fg p-6 last:border-b-0">
+              <p className="font-mono text-sm break-all">{user.email}</p>
+
+              <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <dt className={CARD_TERM_CLASS}>Role</dt>
+                  <dd className="mt-1 text-sm">{user.role}</dd>
+                </div>
+                <div>
+                  <dt className={CARD_TERM_CLASS}>Expires at</dt>
+                  <dd className="mt-1 text-sm">{formatTimestamp(user.expiresAt)}</dd>
+                </div>
+                {user.note ? (
+                  <div>
+                    <dt className={CARD_TERM_CLASS}>Note</dt>
+                    <dd className="mt-1 text-sm">{user.note}</dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt className={CARD_TERM_CLASS}>Created at</dt>
+                  <dd className="mt-1 text-sm">{formatTimestamp(user.createdAt)}</dd>
+                </div>
+              </dl>
+
+              <BaseButton
+                variant="danger"
+                size="sm"
+                className="mt-4 w-full"
+                onClick={() => void remove(user.email)}
+              >
+                Remove
+              </BaseButton>
+            </li>
+          ))}
+          {users.length === 0 && !isLoadingUsers ? (
+            <li className="px-6 py-6 text-sm text-muted">No allowlist entries yet.</li>
+          ) : null}
+        </ul>
+      </BaseCard>
     </main>
   );
 }

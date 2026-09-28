@@ -277,3 +277,45 @@ touch.
 **Scope.** Only the base components are fixed here. `frontend/app/admin/page.tsx` and
 `frontend/app/header.tsx` still carry their own copies of the broken string; they
 inherit the fix when they are migrated in Phase 3.
+
+## 9. The admin allowlist is two layouts over one list
+
+**Context.** The allowlist was a single `<table>` with six columns. At 375 px its
+intrinsic minimum width (six columns of `px-6` padding plus a monospace e-mail address)
+forced the whole page to scroll sideways. The overflowing table is genuinely unusable
+below md.
+
+**Decision.** Keep the table from md upwards and add a stacked card list below it, both
+rendered from the same `users` array:
+
+- the table carries `hidden md:table`
+- the card list carries `md:hidden`
+
+The switch is made with `display`, never with `opacity` or a transform. A visually
+hidden table is still laid out, so it would keep the page scrolling sideways, which is
+exactly the bug being fixed.
+
+The card shows the e-mail address first (`break-all`, so an unbreakable address cannot
+overflow), then a `<dl>` with Role, Expires at, Note (only when the entry has one) and
+Created at, then the `Remove` button across the full width. The table keeps its Note
+column and shows `–` when the entry has no note.
+
+**Measured result** (headless Chrome, Zorn light, fixture entries including a
+51-character e-mail address):
+
+| Viewport | Table | Card list | Document scrollWidth / clientWidth | E-mail wrapping |
+| --- | --- | --- | --- | --- |
+| 375 px | `none` | `block` | 375 / 375 | `word-break: break-all`, 261 / 261 |
+| 768 px | `table` | `none` | 768 / 768 | `word-break: break-all` |
+
+The empty state ("No allowlist entries yet.") renders in both views: as a
+`colspan="6"` cell in the table and as the only `<li>` in the list.
+
+**Consequence — known visual change.** `Remove` moves from the filled CTA button to
+`variant="danger"`, as decided in entry 3. `Save` and `Remove` also gain 2 px of padding
+per side, because the page used `py-1` while `BaseButton`'s `sm` size is `py-1.5`
+(4 px → 6 px); `py-1` was never one of the two button sizes, and matching the admin
+buttons to the header's is part of the point of the migration.
+
+**Also.** The e-mail cell of the table gained `break-all`, so a long address cannot
+blow the table out at md widths either.
