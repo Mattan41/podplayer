@@ -215,7 +215,7 @@ No component code changes.
   * Workload Identity Federation configured between GitHub Actions and GCP (no long-lived keys)
   * Hikari pool capped at 3 connections per instance; Transaction Pooler (port 6543) used
 
-* [ ] **Step 3: Auth & Access Control**
+* [x] **Step 3: Auth & Access Control**
   * Google OAuth login (frontend)
   * Backend JWT verification against an email allowlist
   * Protected endpoints reject unauthenticated requests
@@ -227,5 +227,4 @@ No component code changes.
 
 * [ ] **Step 5: Long-term Maintenance**
   * Migrate `SPRING_DATASOURCE_PASSWORD` (and eventually all datasource values) to GCP Secret Manager, referenced via `--set-secrets` in the deploy workflow
-  * Replace `ddl-auto: update` with `validate` and introduce Flyway migrations
   * Migrate to `originPatterns` in CORS config once preview deploys (Cloudflare Pages / Vercel / Netlify) are added
