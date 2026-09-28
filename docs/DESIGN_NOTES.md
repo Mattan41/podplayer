@@ -11,7 +11,7 @@ on, distinct from `DECISIONS.md`, which records *what* was decided and why.
 
 ## Document roles
 
-Four files describe this project, and they answer different questions.
+Six files describe this project, and they answer different questions.
 Keeping them distinct is what stops them from drifting into each other.
 
 | File | Answers | Update when |
@@ -19,6 +19,8 @@ Keeping them distinct is what stops them from drifting into each other.
 | `ARCHITECTURE.md` | What is the system, as it currently is? | The stack, structure, or principles change. |
 | `docs/DECISIONS.md` | Why was this choice made, and what did it cost? | A non-obvious decision is made, or a known limitation is accepted. Append-only. |
 | `docs/STYLEGUIDE.md` | How should visual design be reasoned about? | The design language itself changes. |
+| `docs/ROADMAP.md` | What is planned, in what order, and what is done? | A phase starts, completes, or is re-scoped. |
+| `docs/BACKLOG.md` | What is wanted but not yet scheduled? | An idea is captured or promoted into the roadmap. |
 | `frontend/components/base/README.md` | What is the API of the Base components? | The Base component API changes. |
 
 When code disagrees with `ARCHITECTURE.md`, update the document. Do not
@@ -26,7 +28,7 @@ let them drift silently. When a decision reverses an earlier one, add a
 new entry rather than editing the old one, so the reasoning stays
 auditable.
 
-This file (`DESIGN_NOTES.md`) sits alongside them and answers a fifth
+This file (`DESIGN_NOTES.md`) sits alongside them and answers a seventh
 question: how is this project *worked on*?
 
 ---

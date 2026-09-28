@@ -12,11 +12,15 @@ Never paste a real value into this file, an issue, a commit, or a chat. If you n
 | `SPRING_DATASOURCE_USERNAME` | Cloud Run env-vars | Backend runtime | Same |
 | `SPRING_DATASOURCE_PASSWORD` | Cloud Run env-vars (TODO: migrate to Secret Manager) | Backend runtime | Reset in the Supabase dashboard, then update Cloud Run |
 | `CORS_ALLOWED_ORIGINS` | Cloud Run env-vars | Backend runtime | Same |
+| `SUPABASE_JWKS_URI` | Cloud Run env-vars | Backend runtime (`NimbusJwtDecoder`) | Same |
 | `env.yaml` (Cloud Run bulk env-vars) | `backend/env.yaml` (gitignored) | Local `gcloud run services update --env-vars-file` | Edit the file, then run `gcloud run services update ... --env-vars-file=env.yaml` |
 | `GCP_PROJECT_ID` | GitHub Secrets | Backend deploy workflow | Rotate in the GitHub repository settings |
 | `GCP_SERVICE_ACCOUNT` | GitHub Secrets | Backend deploy workflow | Same |
 | `WORKLOAD_IDENTITY_PROVIDER` | GitHub Secrets | Backend deploy workflow | Same |
+| `SUPABASE_ANON_KEY` | GitHub Secrets | Frontend deploy workflow | Rotate in the Supabase dashboard, then update the GitHub secret |
 | Local Supabase creds | `backend/.env` (gitignored) | Local development only | Same values as Cloud Run |
+| `NEXT_PUBLIC_SUPABASE_URL` | `frontend/.env.local` (gitignored) / frontend build env | Frontend build — public, not a secret | Same value as the Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `frontend/.env.local` (gitignored) / frontend build env | Frontend build — public, not a secret | Rotate in the Supabase dashboard |
 
 
 The Cloud Run env-var commands are documented in [cloud-run-config.md](./cloud-run-config.md). The GitHub Secrets are referenced by `.github/workflows/deploy-backend.yml`.

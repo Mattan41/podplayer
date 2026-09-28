@@ -10,13 +10,13 @@ A web-based podcast player focused on a disciplined, clean user experience with 
 
 ### Frontend
 - **Framework:** Next.js (App Router, TypeScript)
-- **Styling:** Tailwind CSS v4 + Radix UI Primitives (headless)
+- **Styling:** Tailwind CSS v4 + Radix UI Primitives (headless; deferred, see docs/DECISIONS.md entry 1)
 - **Hosting:** GitHub Pages (Static Site Generation / SSG via `output: 'export'`)
 - **Domain:** `podplayer.kruskopf.org` (Cloudflare CNAME pointing to GitHub Pages, DNS-only / gray cloud)
 
 ### Backend
 - **Framework:** Java 25, Spring Boot 4.x (Web MVC, Data JPA, PostgreSQL Driver)
-- **Deployment:** Containerized (`Dockerfile`) hosted on Google Cloud Run
+- **Deployment:** Containerized (`backend/dockerfile`) hosted on Google Cloud Run
 - **Domain:** `podplayer-api.kruskopf.org` (Cloudflare CNAME pointing to `ghs.googlehosted.com`, DNS-only / gray cloud)
 - **CORS:** Allowed origins configured via the `CORS_ALLOWED_ORIGINS` environment variable. Never hardcoded in source.
 
@@ -113,12 +113,53 @@ The token layer in `frontend/app/globals.css` looks like this:
 ```css
 @import "tailwindcss";
 
+/*
+ * Explicit source for the base components.
+ *
+ * Tailwind's automatic content detection does not reach this app's sibling
+ * directories, so without this line the classes used by ../components are never
+ * emitted into the production CSS and the base components render unstyled.
+ *
+ * That folder's README documents the components and mentions class names in
+ * prose and examples, so it is excluded to keep documentation text out of the
+ * stylesheet.
+ */
+@source "../components";
+@source not "../components/base/README.md";
+
+/*
+ * Theme tokens
+ * ------------
+ * All components consume semantic tokens (--color-bg, --color-fg, ...)
+ * via Tailwind classes (bg-bg, text-fg, ...). Never reference palette
+ * names or hex values directly from components.
+ *
+ * Themes are applied by setting data attributes on <html>:
+ *   <html data-theme="zorn">                    -> Zorn light
+ *   <html data-theme="zorn" data-mode="dark">   -> Zorn dark
+ *
+ * Zorn is the default and is duplicated in :root and [data-theme="zorn"]
+ * so that theme switching stays symmetric (adding new themes does not
+ * require special-casing the default).
+ *
+ * Shape is a theme property as well. --theme-radius backs the rounded-base
+ * utility, so a skin can change the corner radius without any component
+ * changing. Fully circular focal elements (play button, avatar, scrubber
+ * handle) use rounded-full explicitly and are deliberately not affected.
+ *
+ * Muted (secondary) text is a token rather than an opacity utility such as
+ * text-fg/70, so a skin can tint it independently instead of always deriving it
+ * from the foreground.
+ */
+
 :root {
   /* Default theme: Zorn (light) */
-  --theme-bg: #f1ead9;
-  --theme-fg: #211d1a;
-  --theme-accent: #c69328;
-  --theme-cta: #c1440e;
+  --theme-bg: #f1ead9;     /* Flake White */
+  --theme-fg: #211d1a;     /* Ivory Black */
+  --theme-accent: #c69328; /* Yellow Ochre */
+  --theme-cta: #c1440e;    /* Vermilion */
+  --theme-muted: #5f5b53;  /* Secondary text: fg composited 70% over bg */
+  --theme-radius: 0px;     /* Shape is a theme property, see docs/DECISIONS.md */
 }
 
 [data-theme="zorn"] {
@@ -126,13 +167,25 @@ The token layer in `frontend/app/globals.css` looks like this:
   --theme-fg: #211d1a;
   --theme-accent: #c69328;
   --theme-cta: #c1440e;
+  --theme-muted: #5f5b53;
+  --theme-radius: 0px;
 }
 
+/*
+ * Dark mode is a palette rotation, not a grayscale dim.
+ * Background and foreground swap roles; accents brighten slightly
+ * to preserve contrast against the darker canvas.
+ *
+ * Radius is a property of the skin, not of the mode, so it is inherited
+ * unchanged from the light block above. Muted text does depend on both the
+ * foreground and the background, so it is redefined here.
+ */
 [data-theme="zorn"][data-mode="dark"] {
   --theme-bg: #1a1714;
   --theme-fg: #f1ead9;
   --theme-accent: #d9a83e;
   --theme-cta: #e0602a;
+  --theme-muted: #b1ab9e;
 }
 
 @theme inline {
@@ -140,12 +193,16 @@ The token layer in `frontend/app/globals.css` looks like this:
   --color-fg: var(--theme-fg);
   --color-accent: var(--theme-accent);
   --color-cta: var(--theme-cta);
-  --radius-base: 0px;
+  --color-muted: var(--theme-muted);
+  --radius-base: var(--theme-radius);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
 body {
   background-color: var(--theme-bg);
   color: var(--theme-fg);
+  font-family: var(--font-sans, Arial, Helvetica, sans-serif);
 }
 ```
 

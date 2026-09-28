@@ -46,6 +46,7 @@ Values live in the Cloud Run console (or are managed via the commands below and 
 | `SPRING_DATASOURCE_USERNAME` | Database user for the Supabase pooler. |
 | `SPRING_DATASOURCE_PASSWORD` | Database password for the Supabase pooler. |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated list of allowed browser origins (e.g. the frontend URL and `http://localhost:3000`). |
+| `SUPABASE_JWKS_URI` | Supabase JWKS endpoint, used by NimbusJwtDecoder to verify JWT signatures. Required; the service fails to start without it. See infra/secrets.md. |
 
 Expected shape of the datasource URL (placeholders only — see [secrets.md](./secrets.md) for where the real value lives):
 

@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Podplayer — Frontend
 
-## Getting Started
+Next.js client for Podplayer. The site is a static export (`output: "export"`)
+deployed to GitHub Pages at `https://podplayer.kruskopf.org`.
 
-First, run the development server:
+See [`../ARCHITECTURE.md`](../ARCHITECTURE.md) for the stack, the design system
+and the engineering principles, and [`../docs/ROADMAP.md`](../docs/ROADMAP.md)
+for what is being built.
+
+## Requirements
+
+- Node.js 24 (the version used by the deploy workflow).
+
+## Getting started
+
+Copy the example environment file and fill in the values:
+
+```bash
+cp .env.example .env.local
+```
+
+Then start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the
+result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the development server. |
+| `npm run build` | Produce the static export in `out/`. |
+| `npm run lint` | Run ESLint. Enforced in CI; see `docs/DECISIONS.md` entry 12. |
 
-## Learn More
+## Environment variables
 
-To learn more about Next.js, take a look at the following resources:
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_API_URL` | Base URL of the Spring Boot backend. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (public). |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Every `NEXT_PUBLIC_*` value is inlined into the static build and is visible to
+every browser. They are configuration, not secrets. Real values are never
+committed; see `infra/secrets.md`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project layout
 
-## Deploy on Vercel
+- `app/` — App Router pages, layouts and the theme bootstrap script.
+- `app/globals.css` — the canonical theme token layer.
+- `components/base/` — shared UI primitives; see
+  [`components/base/README.md`](components/base/README.md).
+- `lib/` — auth, API and theme providers.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deployment
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+A push to `main` that touches `frontend/**` triggers
+`.github/workflows/deploy-frontend.yml`, which lints, builds the static export
+and publishes `frontend/out` to GitHub Pages.

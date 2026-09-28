@@ -152,6 +152,8 @@ added in entry 8.
 8.18:1) were computed from token values, not rendered, until entry 13 wired the
 mode switch. Entry 14 re-measures them in a browser and confirms both.
 
+**Correction.** Superseded: the pages were migrated in Phase 3; no `outline-accent` remains in `frontend/app/`.
+
 ## 6. Corner radius is a skin property, exposed as `--theme-radius`
 
 **Context.** Components used the Tailwind literal `rounded-none`, which hardcodes a
@@ -228,6 +230,8 @@ Phases 2 and 3.
 the token value, not rendered, until entry 13 wired the mode switch. Entry 14
 re-measures it in a browser and confirms it.
 
+**Correction.** Superseded: the pages were migrated in Phase 3; no `text-fg/70` remains in `frontend/app/`.
+
 ## 8. `focus-visible:outline-solid` is required for the focus ring to paint
 
 **Context.** Phase 1 defined the shared focus styling as `focus:outline-none
@@ -290,6 +294,9 @@ touch.
 **Scope.** Only the base components are fixed here. `frontend/app/admin/page.tsx` and
 `frontend/app/header.tsx` still carry their own copies of the broken string; they
 inherit the fix when they are migrated in Phase 3.
+
+**Correction.** Superseded: the pages were migrated in Phase 3; no broken focus class string remains in `frontend/app/`.
+
 ## 9. The admin allowlist is two layouts over one list
 
 **Context.** The admin allowlist was a single `<table>` that overflowed
@@ -507,5 +514,26 @@ the `cta` token, with `:focus-visible` matching in both.
 No token was changed; the light-mode Vermilion gap (4.27:1) remains the accepted
 limitation recorded in entry 3. The dark-mode ratios are now rendered
 measurements rather than calculations.
+
+## 15. Authorization lives on controllers, not in SecurityConfig
+
+**Context.** SecurityConfig currently lists path-prefix rules
+(/api/admin/** requires ADMIN, /api/** requires authentication).
+With one controller this is fine. With six or more it becomes a
+second place to look for every route's authorization, and a new
+controller added without a corresponding rule is silently
+misconfigured.
+
+**Decision.** New controllers declare authorization at class level
+with @PreAuthorize. SecurityConfig keeps only the coarse rules:
+/api/auth/** permitAll, everything else authenticated. Existing
+controllers are migrated when they are next modified for another
+reason.
+
+**Consequence.** Authorization lives next to the code it protects;
+removing a controller removes its rule automatically. SecurityConfig
+stays short. The cost is that reading one endpoint's authorization
+requires opening the controller, not the config — a trade the
+project prefers.
 
 
