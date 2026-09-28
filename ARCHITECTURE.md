@@ -225,7 +225,7 @@ No component code changes.
   * Backend JWT verification against an email allowlist
   * Protected endpoints reject unauthenticated requests
 
-* [ ] **Step 4: Core Feature Implementation**
+* [ ] **Step 4: Core Feature Implementation** See `docs/ROADMAP.md`
   * RSS feed ingestion & podcast episode parsing
   * Audio playback engine, media session integration, and mini/full player views
   * Playback progress tracking and cross-device state synchronization via Spring Boot
