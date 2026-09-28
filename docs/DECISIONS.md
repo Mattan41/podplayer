@@ -374,3 +374,40 @@ without a decision, which is the intended cost.
 
 **Scope.** This is about `frontend/app/`. Base components themselves use
 raw elements by necessity and are exempt from the rule.
+
+## 12. Lint is enforced in CI, not only locally
+
+**Context.** Next 16 does not run ESLint during `next build`. The lint rules
+added in Phase 4 (`react/forbid-elements`, `no-restricted-syntax` for
+className patterns) therefore had no effect on the deployed Pages site:
+they only ran when a developer remembered to type `npm run lint`.
+
+**Decision.** Add a `Lint` step to `.github/workflows/deploy-frontend.yml`,
+between `Install dependencies` and `Build static site`. The step runs
+`npm run lint` with no extra flags; a rule violation fails the workflow
+and blocks the Pages deploy.
+
+**Consequence.** The rules from Phase 4 — `react/forbid-elements` and the
+three `className` patterns under `no-restricted-syntax` — are now enforced
+on every push that touches `frontend/**`, not only on the machine of
+whoever remembered to run lint. The workflow triggers on `push` to `main`
+and on `workflow_dispatch`; there is no `pull_request` trigger, so a
+violation does not prevent the commit from landing on `main`. What it does
+prevent is the deploy: the job fails before the artifact is uploaded, so
+the site keeps serving the last commit that passed.
+
+**Measured (Phase 5).** With a deliberate probe in `frontend/app/`
+containing a raw `<button>` and a `rounded-md` class:
+
+| Command | Exit | Output |
+| --- | --- | --- |
+| `npm run lint` | 1 | one error per violation (`no-restricted-syntax`, `react/forbid-elements`) |
+| `npm run build` | 0 | `✓ Compiled successfully`; the string `eslint` appears nowhere in the build log |
+
+That is the pair of measurements behind the first sentence of this entry:
+the rule is enforced, and `next build` is not the thing enforcing it.
+
+**Why not `--max-warnings=0`.** The rules run at level `error`, not `warn`,
+so no warning-only pass exists to suppress. Adding `--max-warnings=0` would
+have no effect today, and would give a false sense of stricter enforcement
+if a future rule is added at `warn` and meant to be non-blocking.

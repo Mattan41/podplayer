@@ -51,6 +51,19 @@ checked the computed `outline-style` and discovered it had never been
 painted. Every subsequent claim about that ring is anchored to a
 measurement, not a description.
 
+### A `grep` over `frontend/` also reads `node_modules`
+
+The Phase 5 token sweep was specified as, for example,
+`grep -rn 'rounded-none\|rounded-sm\|rounded-md' frontend/ --include='*.tsx'`.
+Run literally, it descends into `frontend/node_modules` and returns ten
+matches for intermediate radii and three for `dark:`, every one of them
+third-party code. "The sweep returned empty" is only credible when the
+command that produced it cannot see vendored code, so the sweep is run with
+`--exclude-dir=node_modules --exclude-dir=.next --exclude-dir=out`, and the
+literal match count is reported next to it. Reporting only the filtered
+number hides the reason the filter is needed; reporting only the literal
+number buries the answer in noise.
+
 ### Agents systematically hallucinate file contents and rule references
 
 When an agent (Cline, Claude, GPT, DeepSeek) says "as stated in X.md",
@@ -72,6 +85,28 @@ effect because the outline was never painted in the first place. Entry 5
 was not rewritten. A correction note was appended instead. Future-me
 reading entry 5 first will see the cross-reference to entry 8 before
 drawing conclusions.
+
+---
+
+## Enforcement must be executed, not documented
+
+A convention that lives only in prose can silently stop being true. Two
+incidents in this project have the same shape:
+
+- The focus ring was specified in `frontend/components/base/README.md` §4 and
+  measured by hand in `DECISIONS.md` entry 5, and it was never painted, because
+  `focus:outline-none` overrode the outline style that `outline-2` depends on.
+  Nothing executed the claim. Entry 8 records the repair.
+- The lint rules that forbid raw elements and skin-hostile class patterns were
+  configured at level `error` in Phase 4, but `next build` does not run ESLint
+  (Next 16 removed that integration) and CI had no Lint step, so the rules only
+  ran on a machine where somebody typed `npm run lint`. Entry 12 records the
+  repair.
+
+The working rule that follows: every enforced convention names the process that
+executes it — `npm run lint`, a CI job, a test — and that process is itself
+verified once, by watching it fail on a deliberate violation before trusting it
+to pass on clean code.
 
 ---
 
@@ -116,8 +151,8 @@ be separate commits. The working pattern that has emerged:
 3. **Verification.** The agent reports measurements, not descriptions.
    Diff review by a human before commit.
 
-The three phases completed so far (base components, counter migration,
-focus-ring fix, admin and header migration) each followed this shape.
+Each phase completed so far — base components, counter migration, focus-ring
+fix, admin and header migration, lint enforcement — followed this shape.
 The result is a commit history that can be `git bisect`-ed, and a set of
 `DECISIONS.md` entries that map onto actual commits.
 

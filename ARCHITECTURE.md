@@ -193,12 +193,13 @@ No component code changes.
 1. **Strict Token Usage:** Always use semantic theme classes (`bg-bg`, `text-fg`, `border-fg`, `bg-cta`). Never inline hex codes, palette names (`zorn-*`), or Tailwind's `dark:` variant in TSX components.
 2. **Static Export Constraint:** The Next.js frontend deploys to GitHub Pages (`output: 'export'`). Do not implement Next.js Node-based API routes or server-side runtime headers. All dynamic endpoints live in Spring Boot.
 3. **Shape Rule Enforcement:** Use `rounded-base` for rectangular surfaces and controls. It resolves through the theme radius (`--theme-radius`), so shape is a skin property rather than a component concern; Zorn sets it to `0`. Only designated focal elements (play trigger, avatar, scrubber thumb) may use `rounded-full`. Never intermediate radii such as `rounded-sm` or `rounded-md`.
-4. **Base Components:** Use the `Base*` components from `frontend/components/base/` instead of raw `button`, `input` and `select` elements. Raw elements may only appear inside that folder.
+4. **Base Components:** Use the `Base*` components from `frontend/components/base/` instead of raw `button`, `input` and `select` elements. Raw elements may only appear inside that folder. Enforced by `react/forbid-elements` at level `error` in `frontend/eslint.config.mjs`, which exempts `components/base/**`.
 5. **Environment Isolation:** Never commit secrets. Backend configuration consumes environment variables for Supabase credentials. Env files live per-app: `backend/.env` (Spring), `frontend/.env.local` (Next). Root `.env` is reserved for tooling run from the repo root.
 6. **No Datasource Defaults:** `backend/src/main/resources/application.yaml` must not contain default values for `SPRING_DATASOURCE_*`; missing env vars should fail fast on startup.
 7. **No Hardcoded Domains in Source:** CORS origins, backend URLs, and similar environment-specific values must be read from environment variables. Default values in `application.yaml` are permitted only for local development (`http://localhost:3000`).
 8. **Contract First:** When creating or modifying backend DTOs or endpoints, update the client-side fetchers and TypeScript interfaces to maintain end-to-end synchronization.
 9. **Source of Truth for Versions:** Trust `backend/pom.xml` and `frontend/package.json` over this document when they disagree. Update this document rather than the code when a discrepancy is found.
+10. **Enforced Token Patterns:** `no-restricted-syntax` at level `error` in `frontend/eslint.config.mjs` rejects three class patterns in `className` strings: an intermediate radius (`rounded-*` other than `rounded-base` / `rounded-full`, see §5.3 and `docs/DECISIONS.md` entry 6), a foreground opacity utility (`text-fg/…`, `bg-fg/…`, which is `text-muted` per entry 7), and `outline-accent` (which is `outline-cta` per entry 5). Each rule message names the replacement and the entry that explains it.
 
 ---
 
