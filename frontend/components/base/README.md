@@ -205,8 +205,16 @@ moves the boundary up the tree for every consumer.
 
 ### 4. Focus indicators
 
-Shared focus styling is `focus-visible:outline-2 focus-visible:outline-offset-2
-focus-visible:outline-cta`.
+Shared focus styling is `focus:outline-none focus-visible:outline-2
+focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-cta`,
+used verbatim by `BaseButton` and by `CONTROL_CLASS` (shared by `BaseInput` and
+`BaseSelect`).
+
+`focus-visible:outline-solid` is not optional. Tailwind v4 compiles `outline-2` to
+`outline-style: var(--tw-outline-style); outline-width: 2px`, and `focus:outline-none`
+sets `--tw-outline-style: none`, so a ring declared with a width and a colour but no
+explicit style is never painted. `docs/DECISIONS.md` entry 8 has the measurements and
+the ordering caveat.
 
 Vermilion is used rather than Yellow Ochre because Yellow Ochre on the light
 background measures **2.30:1**, below the 3:1 that WCAG 1.4.11 requires for
@@ -225,7 +233,8 @@ distinct outline rather than merging into the edge.
 - Labels are associated with their controls through `BaseField`.
 - `disabled` and `invalid` are expressed with native attributes, never with color
   alone.
-- Focus is restyled, never removed.
+- Focus is restyled, never removed: keyboard focus paints a 2px `cta` ring (§4),
+  while a mouse click paints nothing.
 
 ## Not here yet
 

@@ -137,6 +137,12 @@ no variant uses `fg` as its border or fill. It was rejected because
 `docs/STYLEGUIDE.md` §6 restricts focus indicators to Vermilion or Yellow Ochre.
 Changing §6 is a design decision rather than a refactor, so it is left open.
 
+**Correction (see entry 8).** The ring described above was not painted while this
+entry was written: `focus:outline-none` overrode the outline style that `outline-2`
+relies on, so the colour measured here had no visible effect. The measurements still
+hold, and they became observable when the missing `focus-visible:outline-solid` was
+added in entry 8.
+
 ## 6. Corner radius is a skin property, exposed as `--theme-radius`
 
 **Context.** Components used the Tailwind literal `rounded-none`, which hardcodes a
@@ -208,3 +214,66 @@ values were kept.
 **Scope.** Only `BaseField` uses `text-muted` so far. The remaining 14 `text-fg/70`
 occurrences are in the pages, and they disappear as the pages are migrated in
 Phases 2 and 3.
+
+## 8. `focus-visible:outline-solid` is required for the focus ring to paint
+
+**Context.** Phase 1 defined the shared focus styling as `focus:outline-none
+focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cta`.
+Measuring the migrated counter page in Phase 2 showed a focused button reporting
+`outline-style: none` in the browser, so no ring was painted at all and the colour
+change that entry 5 introduced was not observable.
+
+**Cause.** Tailwind v4 emits
+
+```css
+.focus\:outline-none:focus              { --tw-outline-style: none; outline-style: none }
+.focus-visible\:outline-2:focus-visible { outline-style: var(--tw-outline-style); outline-width: 2px }
+```
+
+The width utility takes its style from `--tw-outline-style`, and the suppression
+utility sets that custom property to `none`. On a focused control both `:focus` and
+`:focus-visible` match, so the ring had a width, an offset and a colour but no style.
+
+**Decision.** Add `focus-visible:outline-solid` to the two shared class strings:
+`BASE_CLASS` in `BaseButton.tsx` and `CONTROL_CLASS` in `control.ts` (shared by
+`BaseInput` and `BaseSelect`). It emits `outline-style: solid` directly, so no custom
+property is involved. `focus:outline-none` is kept: it is what suppresses the
+browser's default ring on a plain mouse click.
+
+**Measured result** (headless Chrome, Zorn light, 375 px viewport):
+
+| Case | outline-style | width | colour | offset | ring painted |
+| --- | --- | --- | --- | --- | --- |
+| Button, keyboard focus (before) | none | 2px | rgb(198, 147, 40) | 2px | **no** |
+| Button, keyboard focus (after) | solid | 2px | rgb(193, 68, 14) | 2px | yes |
+| Input, keyboard focus (after) | solid | 2px | rgb(193, 68, 14) | 2px | yes |
+| Select, keyboard focus (after) | solid | 2px | rgb(193, 68, 14) | 2px | yes |
+| Button, mouse click | none | 3px (unused) | – | – | **no** |
+
+`rgb(193, 68, 14)` is the `cta` token, so the ring is now Vermilion, as entry 5
+intended. The mouse-click row is a `BaseButton` with a no-op handler, chosen so that
+the measurement is not perturbed by the button being disabled while it increments.
+
+**Ordering dependency.** `focus:outline-none` and `focus-visible:outline-solid` set the
+same property at the same specificity, so the ring depends on Tailwind emitting the
+`focus-visible` bucket after the `focus` bucket. The built stylesheet was checked and
+does, in this order:
+
+```css
+.focus-visible\:outline-cta:focus-visible      { outline-color: var(--theme-cta) }
+.focus-visible\:outline-solid:focus-visible    { --tw-outline-style: solid; outline-style: solid }
+```
+
+A reordering would silently remove the ring again, so this is worth re-checking
+whenever `globals.css` or the Tailwind version changes.
+
+**Rejected alternative.** `focus:outline-hidden` is v4's `outline: 2px solid
+transparent`. Unlike `outline-none` it leaves `--tw-outline-style` alone, so the width
+utility keeps working, but the shorthand also resets `outline-color` at the same
+specificity as `focus-visible:outline-cta` and therefore depends on source order for
+the colour as well. `outline-solid` changes one property that `outline-cta` does not
+touch.
+
+**Scope.** Only the base components are fixed here. `frontend/app/admin/page.tsx` and
+`frontend/app/header.tsx` still carry their own copies of the broken string; they
+inherit the fix when they are migrated in Phase 3.

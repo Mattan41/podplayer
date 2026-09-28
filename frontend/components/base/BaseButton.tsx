@@ -11,10 +11,11 @@ export type BaseButtonSize = "sm" | "md";
  * Focus is restyled, never removed. Vermilion is used rather than Yellow Ochre
  * because Yellow Ochre on the light background measures 2.30:1, below the 3:1
  * that WCAG 1.4.11 asks of non-text contrast; Vermilion measures 4.27:1 in light
- * mode and 4.99:1 in dark mode. See docs/DECISIONS.md entry 5.
+ * mode and 4.99:1 in dark mode. See docs/DECISIONS.md entry 5, and entry 8 for
+ * why focus-visible:outline-solid is required for the ring to be painted at all.
  */
 const BASE_CLASS =
-  "cursor-pointer rounded-base font-mono tracking-wide transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cta disabled:cursor-not-allowed disabled:opacity-50";
+  "cursor-pointer rounded-base font-mono tracking-wide transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-cta disabled:cursor-not-allowed disabled:opacity-50";
 
 /**
  * Complete class strings per variant. No partial overrides: a caller that needs

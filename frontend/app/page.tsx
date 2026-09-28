@@ -95,7 +95,11 @@ export default function Home() {
           {isIncrementing ? "Incrementing…" : "Increment"}
         </BaseButton>
 
-        {error ? <BaseCard className="mt-4 p-3 text-sm">{error}</BaseCard> : null}
+        {error ? (
+          <BaseCard className="mt-4 p-3">
+            <p className="text-sm">{error}</p>
+          </BaseCard>
+        ) : null}
       </BaseCard>
     </main>
   );
