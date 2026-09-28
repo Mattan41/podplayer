@@ -277,45 +277,100 @@ touch.
 **Scope.** Only the base components are fixed here. `frontend/app/admin/page.tsx` and
 `frontend/app/header.tsx` still carry their own copies of the broken string; they
 inherit the fix when they are migrated in Phase 3.
-
 ## 9. The admin allowlist is two layouts over one list
 
-**Context.** The allowlist was a single `<table>` with six columns. At 375 px its
-intrinsic minimum width (six columns of `px-6` padding plus a monospace e-mail address)
-forced the whole page to scroll sideways. The overflowing table is genuinely unusable
-below md.
+**Context.** The admin allowlist was a single `<table>` that overflowed
+horizontally on a 375 px viewport. Six columns of content, one of which is
+an e-mail address, do not fit on a phone.
 
-**Decision.** Keep the table from md upwards and add a stacked card list below it, both
-rendered from the same `users` array:
+**Decision.** Render the same `users` array twice, once as a `<table>` at
+`md` and above and once as a `<ul>` of cards below `md`. Toggle with
+`hidden md:table` and `md:hidden`, both of which compile to `display`, so
+the hidden layout is not rendered for assistive technology or the tab
+order.
 
-- the table carries `hidden md:table`
-- the card list carries `md:hidden`
+**Consequence — measured at both breakpoints.**
 
-The switch is made with `display`, never with `opacity` or a transform. A visually
-hidden table is still laid out, so it would keep the page scrolling sideways, which is
-exactly the bug being fixed.
+| Viewport | `table` display | `ul` display | scrollWidth / clientWidth |
+| --- | --- | --- | --- |
+| 375 px | `none` | `block` | 375 / 375 — no horizontal scroll |
+| 768 px | `table` | `none` | 768 / 768 — no horizontal scroll |
 
-The card shows the e-mail address first (`break-all`, so an unbreakable address cannot
-overflow), then a `<dl>` with Role, Expires at, Note (only when the entry has one) and
-Created at, then the `Remove` button across the full width. The table keeps its Note
-column and shows `–` when the entry has no note.
+A >40-character address (`very.long.allowlisted.address@example-subdomain.test`,
+51 chars) wraps inside its card: `p.scrollWidth == p.clientWidth == 261`. The
+table's email cell carries `break-all` for the same reason. The empty state
+appears in both views: as a single `<li>` at 375 px and in a `colspan="6"`
+cell at 768 px.
 
-**Measured result** (headless Chrome, Zorn light, fixture entries including a
-51-character e-mail address):
+**Judgement calls recorded here rather than in a separate entry.**
 
-| Viewport | Table | Card list | Document scrollWidth / clientWidth | E-mail wrapping |
-| --- | --- | --- | --- | --- |
-| 375 px | `none` | `block` | 375 / 375 | `word-break: break-all`, 261 / 261 |
-| 768 px | `table` | `none` | 768 / 768 | `word-break: break-all` |
+1. `Remove` uses the `danger` variant introduced in entry 3, not the filled
+   `cta` button it used before. Visible change, pre-approved by that entry.
+2. `Save` and `Remove` gained 2 px of padding per side (`py-1` to `py-1.5`).
+   The old page used `py-1`, which is not one of `BaseButton`'s two sizes.
+   Adding a third size for two buttons was rejected; the size system stays
+   at `sm` / `md`, and the previous page's padding was outside it.
+3. The two page-level `<section className="rounded-none border border-fg
+   bg-bg">` wrappers became `BaseCard`. `.clinerules` forbids `rounded-none`,
+   so they were already a rule violation, and the change is what let the
+   allowlist's own layout use `BaseCard` consistently.
+4. Every `text-fg/70` in these two files became `text-muted`, completing the
+   migration entry 7 promised.
 
-The empty state ("No allowlist entries yet.") renders in both views: as a
-`colspan="6"` cell in the table and as the only `<li>` in the list.
+The net result: `grep -rn '<button|<input|<select' frontend/app` finds
+nothing, and `grep -rn 'rounded-none|text-fg/70|outline-accent|zorn-'
+frontend/app` finds nothing. Both grep commands are the acceptance test
+for this phase; if a later change reintroduces either pattern, the phase
+has been reopened.
 
-**Consequence — known visual change.** `Remove` moves from the filled CTA button to
-`variant="danger"`, as decided in entry 3. `Save` and `Remove` also gain 2 px of padding
-per side, because the page used `py-1` while `BaseButton`'s `sm` size is `py-1.5`
-(4 px → 6 px); `py-1` was never one of the two button sizes, and matching the admin
-buttons to the header's is part of the point of the migration.
+## 10. Native `datetime-local` consumes seven Tab presses in Chrome
 
-**Also.** The e-mail cell of the table gained `break-all`, so a long address cannot
-blow the table out at md widths either.
+**Context.** Verifying the focus ring in the admin form required tabbing
+through the visible controls. Reaching the `Save` button took roughly
+fourteen Tab presses, not the seven the number of controls suggested.
+
+**Cause.** A native `<input type="datetime-local">` is a composite
+control: date, hour, minute, and (depending on locale) day-period each
+occupy their own internal field, and Chrome keeps Tab inside the control
+until every field has been visited. This is defined by the browser and
+the `:focus-visible` spec, not by the project's CSS or by `BaseInput`.
+
+**Decision.** Accept the behaviour. Suppressing it would require styling
+`:focus` instead of `:focus-visible`, which would make a mouse click on a
+button paint a ring as well. Both halves of the trade are worse than the
+original.
+
+**Consequence.** A keyboard-only user takes fourteen Tab presses to reach
+`Save` when the `datetime-local` field is empty. Recorded as a known
+limitation. Revisit only if a user complains; the alternatives are three
+separate fields or a custom date picker, both of which need a component
+that does not exist yet.
+
+**Related finding.** The same verification pass confirmed that Chrome
+treats text-entry elements as always `:focus-visible`, so clicking the
+email input paints a ring. Buttons behave as required: mouse click, no
+ring. This is spec behaviour and is documented here rather than "fixed",
+because fixing it would remove the ring from the keyboard case as well.
+
+## 11. Base components are the only place raw elements are allowed
+
+**Context.** Before Phase 3, four files in `frontend/app/` carried their
+own copies of the same `<button>`, `<input>`, `<select>` and `<label>`
+markup with matching class strings. The copies drifted, and the drift is
+what let the admin allowlist's mobile overflow go unnoticed: styling
+lived in pages, not in a component that a rule could protect.
+
+**Decision.** Move every shared control into `frontend/components/base/`
+and forbid raw elements in `frontend/app/` via lint. The rule arrives in
+Phase 4 as `react/forbid-elements`, first as `warn` to confirm it fires,
+then as `error`, with `frontend/components/base/**` exempt.
+
+**Consequence.** After Phase 3, `grep -rn '<button|<input|<select'
+frontend/app` returns nothing. Adding a new form control to a page
+requires either using a Base component or changing the lint
+configuration, both of which are reviewable. The trade is that a
+one-off control which does not fit any Base component cannot be added
+without a decision, which is the intended cost.
+
+**Scope.** This is about `frontend/app/`. Base components themselves use
+raw elements by necessity and are exempt from the rule.
