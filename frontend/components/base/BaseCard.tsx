@@ -19,5 +19,5 @@ export type BaseCardProps = {
 };
 
 export function BaseCard({ children, className }: BaseCardProps) {
-  return <div className={cn("rounded-none border border-fg bg-bg", className)}>{children}</div>;
+  return <div className={cn("rounded-base border border-fg bg-bg", className)}>{children}</div>;
 }

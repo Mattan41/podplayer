@@ -14,7 +14,7 @@ export type BaseButtonSize = "sm" | "md";
  * mode and 4.99:1 in dark mode. See docs/DECISIONS.md entry 5.
  */
 const BASE_CLASS =
-  "cursor-pointer rounded-none font-mono tracking-wide transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cta disabled:cursor-not-allowed disabled:opacity-50";
+  "cursor-pointer rounded-base font-mono tracking-wide transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cta disabled:cursor-not-allowed disabled:opacity-50";
 
 /**
  * Complete class strings per variant. No partial overrides: a caller that needs

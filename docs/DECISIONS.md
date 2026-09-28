@@ -136,3 +136,40 @@ mode and 14.88:1 in dark mode, and it would be unambiguous on every variant beca
 no variant uses `fg` as its border or fill. It was rejected because
 `docs/STYLEGUIDE.md` §6 restricts focus indicators to Vermilion or Yellow Ochre.
 Changing §6 is a design decision rather than a refactor, so it is left open.
+
+## 6. Corner radius is a skin property, exposed as `--theme-radius`
+
+**Context.** Components used the Tailwind literal `rounded-none`, which hardcodes a
+zero radius. The stated goal is that a skin can be swapped without touching
+component code (`ARCHITECTURE.md` §4.6), and corner radius is something a skin
+would reasonably want to control. A `--radius-base` token already existed in
+`@theme inline`, but it was pinned to the literal `0px`, so it could not be themed
+either.
+
+**Decision.** Move the value into the theme blocks as `--theme-radius` and map the
+utility to it, mirroring how `--color-*` already map to `--theme-*`:
+
+```css
+@theme inline {
+  --radius-base: var(--theme-radius);
+}
+```
+
+Components use `rounded-base`. Fully circular focal elements keep `rounded-full`
+explicitly, and intermediate radii stay banned, so the rule is binary: `rounded-base`
+or `rounded-full`.
+
+`--radius-base` is not readable as a CSS variable at runtime: `@theme inline`
+inlines the value, so the emitted rule is `border-radius: var(--theme-radius)` and
+no `--radius-base` custom property exists in the document. Theme code therefore sets
+`--theme-radius`, and component code uses the `rounded-base` utility.
+
+**Consequence.** A skin block can now set any radius with no component change, and
+Zorn sets `0px` in both modes, so nothing looks different today. Radius is
+deliberately not repeated in the dark block: it is a property of the skin, not of
+the mode.
+
+**Note.** `docs/STYLEGUIDE.md` §5 and §8, and `ARCHITECTURE.md` §4.1, still describe
+`border-radius: 0` as a fixed property of the design language. Those statements now
+describe Zorn's value rather than a system rule, and are worth rewording in a future
+documentation pass.

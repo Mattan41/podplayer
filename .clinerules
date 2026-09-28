@@ -1,6 +1,6 @@
 # Project Guidelines
 Always read and strictly follow ARCHITECTURE.md before planning or modifying code.
-- Follow the Zorn Palette design system (strict 4 colors, border-radius: 0).
+- Follow the Zorn Palette design system (strict 4 colors; use rounded-base, never intermediate radii such as rounded-sm / rounded-md).
 - Next.js frontend uses static export (output: 'export'). Dynamic logic goes in Spring Boot.
 - Do not hardcode credentials.
 - Tests: counter table is a singleton row (id=1). Never truncate it in tests.

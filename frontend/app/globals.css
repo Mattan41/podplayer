@@ -1,6 +1,20 @@
 @import "tailwindcss";
 
 /*
+ * Explicit source for the base components.
+ *
+ * Tailwind's automatic content detection does not reach this app's sibling
+ * directories, so without this line the classes used by ../components are never
+ * emitted into the production CSS and the base components render unstyled.
+ *
+ * That folder's README documents the components and mentions class names in
+ * prose and examples, so it is excluded to keep documentation text out of the
+ * stylesheet.
+ */
+@source "../components";
+@source not "../components/base/README.md";
+
+/*
  * Theme tokens
  * ------------
  * All components consume semantic tokens (--color-bg, --color-fg, ...)
@@ -14,6 +28,11 @@
  * Zorn is the default and is duplicated in :root and [data-theme="zorn"]
  * so that theme switching stays symmetric (adding new themes does not
  * require special-casing the default).
+ *
+ * Shape is a theme property as well. --theme-radius backs the rounded-base
+ * utility, so a skin can change the corner radius without any component
+ * changing. Fully circular focal elements (play button, avatar, scrubber
+ * handle) use rounded-full explicitly and are deliberately not affected.
  */
 
 :root {
@@ -22,6 +41,7 @@
   --theme-fg: #211d1a;     /* Ivory Black */
   --theme-accent: #c69328; /* Yellow Ochre */
   --theme-cta: #c1440e;    /* Vermilion */
+  --theme-radius: 0px;     /* Shape is a theme property, see docs/DECISIONS.md */
 }
 
 [data-theme="zorn"] {
@@ -29,12 +49,16 @@
   --theme-fg: #211d1a;
   --theme-accent: #c69328;
   --theme-cta: #c1440e;
+  --theme-radius: 0px;
 }
 
 /*
  * Dark mode is a palette rotation, not a grayscale dim.
  * Background and foreground swap roles; accents brighten slightly
  * to preserve contrast against the darker canvas.
+ *
+ * Radius is a property of the skin, not of the mode, so it is inherited
+ * unchanged from the light block above.
  */
 [data-theme="zorn"][data-mode="dark"] {
   --theme-bg: #1a1714;
@@ -48,7 +72,7 @@
   --color-fg: var(--theme-fg);
   --color-accent: var(--theme-accent);
   --color-cta: var(--theme-cta);
-  --radius-base: 0px;
+  --radius-base: var(--theme-radius);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

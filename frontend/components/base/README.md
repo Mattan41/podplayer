@@ -72,7 +72,7 @@ satisfies only condition 2 is a refactor of an existing variant, not a new one.
 | `children` | `ReactNode` | – |
 | `className` | `string` | – |
 
-Renders `rounded-none border border-fg bg-bg`. It owns no padding, width or
+Renders `rounded-base border border-fg bg-bg`. It owns no padding, width or
 margin, so the caller composes the box:
 
 ```tsx
@@ -153,9 +153,14 @@ Only semantic theme tokens. Never a hex value, never a palette name (`zorn-*`),
 never Tailwind's `dark:` variant. Dark mode is a property of the theme, not of the
 component; see `ARCHITECTURE.md` §4.6.
 
-`rounded-none` everywhere. The design system permits fully circular elements in
-exactly three places (play button, avatar, scrubber handle), none of which exist
-yet, and never an intermediate radius (`rounded-sm`, `rounded-md`, ...).
+`rounded-base` on every rectangular surface and control. It resolves through the
+theme radius (`--theme-radius`), which Zorn sets to `0px`, so a skin can change
+the corner radius without any component changing.
+
+Fully circular elements are permitted in exactly three places (play button,
+avatar, scrubber handle), none of which exist yet. Those keep `rounded-full`
+explicitly and are deliberately not affected by the theme radius. Never an
+intermediate radius (`rounded-sm`, `rounded-md`, ...).
 
 ### 2. Base components must not set classes that callers are expected to override
 
