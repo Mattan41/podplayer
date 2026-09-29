@@ -55,12 +55,16 @@ These steps are performed **manually** against the Supabase project. They are de
 
 ### 1. Enable Row Level Security
 
-Flyway creates `allowed_users`, `counter`, and `flyway_schema_history` in the `public` schema. Supabase exposes `public` through PostgREST, so enable Row Level Security on all three:
+Flyway creates `allowed_users`, `counter`, and `flyway_schema_history` in the `public` schema. Since `V2__create_podcast_tables.sql` it also creates `podcast`, `episode`, `subscription`, and `playback_state`. Supabase exposes `public` through PostgREST, so enable Row Level Security on all of them:
 
 ```sql
 ALTER TABLE allowed_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE counter ENABLE ROW LEVEL SECURITY;
 ALTER TABLE flyway_schema_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE podcast ENABLE ROW LEVEL SECURITY;
+ALTER TABLE episode ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscription ENABLE ROW LEVEL SECURITY;
+ALTER TABLE playback_state ENABLE ROW LEVEL SECURITY;
 ```
 
 Then add a deny-all policy for the `anon` and `authenticated` roles that PostgREST uses. The backend is unaffected: it connects over JDBC as the `postgres` role, which bypasses RLS.
@@ -75,6 +79,22 @@ CREATE POLICY "Deny anon access" ON counter
     USING (false) WITH CHECK (false);
 
 CREATE POLICY "Deny anon access" ON flyway_schema_history
+    FOR ALL TO anon, authenticated
+    USING (false) WITH CHECK (false);
+
+CREATE POLICY "Deny anon access" ON podcast
+    FOR ALL TO anon, authenticated
+    USING (false) WITH CHECK (false);
+
+CREATE POLICY "Deny anon access" ON episode
+    FOR ALL TO anon, authenticated
+    USING (false) WITH CHECK (false);
+
+CREATE POLICY "Deny anon access" ON subscription
+    FOR ALL TO anon, authenticated
+    USING (false) WITH CHECK (false);
+
+CREATE POLICY "Deny anon access" ON playback_state
     FOR ALL TO anon, authenticated
     USING (false) WITH CHECK (false);
 ```
@@ -103,11 +123,12 @@ In the Supabase dashboard, under **Authentication → URL Configuration**:
 
 ### 4. Verify
 
-All three tables must report `relrowsecurity = t`:
+All seven tables must report `relrowsecurity = t`:
 
 ```sql
 SELECT relname, relrowsecurity FROM pg_class
-WHERE relname IN ('allowed_users', 'counter', 'flyway_schema_history');
+WHERE relname IN ('allowed_users', 'counter', 'flyway_schema_history',
+                  'podcast', 'episode', 'subscription', 'playback_state');
 ```
 
 The administrator row must be present:

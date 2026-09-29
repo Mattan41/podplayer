@@ -536,4 +536,42 @@ stays short. The cost is that reading one endpoint's authorization
 requires opening the controller, not the config — a trade the
 project prefers.
 
+## 16. Podcast ownership is keyed on `allowed_users.email`, not a `users` table
+
+**Context.** The Phase A brief specified
+`subscription.user_id BIGINT NOT NULL REFERENCES users(id)` and the same for
+`playback_state`. No `users` table exists in this database, and no migration
+creates one. Identity here is the e-mail address: Supabase Auth issues the JWT,
+`SecurityConfig` verifies it and rejects addresses that are not in the
+allowlist, `WhitelistService` resolves the role from `allowed_users` whose
+primary key is `email` (`V1__create_allowed_users.sql`), and `MeController`
+returns that same address. Nothing in the backend ever produces a numeric user
+id, so the specified foreign key could not be satisfied by any existing table —
+`V2` would have failed at migration time, before Hibernate could validate
+anything.
+
+**Decision.** `subscription` and `playback_state` are keyed on
+`user_email TEXT NOT NULL REFERENCES allowed_users(email) ON DELETE CASCADE`,
+and their repositories query by `userEmail`. No user table is introduced. The
+compound keys are otherwise exactly as specified, and the rest of `V2` is
+unchanged.
+
+**Consequence.**
+
+- **The allowlist row *is* the user record.** Deleting an entry now also
+  deletes that user's subscriptions and playback state, through the cascade
+  from `allowed_users`. That matches the intent of both revocation and the
+  "Delete account" backlog item, but it is a data-destroying side effect that
+  `AdminUserController`'s remove action does not warn about yet.
+- **The stored address must be normalised.** `WhitelistService` normalises with
+  `Emails.normalize` (trim and lower case) before lookup, so a writer that
+  stores an un-normalised address produces a foreign key violation rather than
+  a missing row. Phase B must normalise before inserting.
+- **A changed e-mail address loses history.** If the address in the allowlist
+  ever changes, the user's subscriptions and playback state do not follow it.
+  Google addresses do not normally change, and no such feature is planned.
+- **A numeric user table becomes worthwhile only if identity is split from the
+  allowlist** — for example a second provider sharing one account. That is a
+  backlog item, not a plan, so the indirection is not paid for today.
+
 
