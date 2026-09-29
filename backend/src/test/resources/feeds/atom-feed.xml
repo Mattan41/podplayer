@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Fixture for RssFeedParserTest: the Atom counterpart of rss2-feed.xml.
+
+  One entry only, with <published> and an enclosure link. <updated> differs from
+  <published> so the assertions can tell which one the parser chose. The feed
+  carries no artwork at all, so imageUrl must come back null.
+-->
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Atom Test Podcast</title>
+  <subtitle>An Atom feed used by the parser test.</subtitle>
+  <id>urn:uuid:9f0b7a1e-0f3a-4c62-9c1c-2b0a1e5d7c11</id>
+  <updated>2026-02-01T08:00:00Z</updated>
+  <author>
+    <name>Atom Author</name>
+  </author>
+  <link rel="alternate" href="https://example.org/atom-test-podcast"/>
+
+  <entry>
+    <id>urn:uuid:1d5c0f2a-77a1-4e39-8a1f-6b2c9e4d0a33</id>
+    <title>Atom Episode One</title>
+    <updated>2026-02-01T08:05:00Z</updated>
+    <published>2026-02-01T07:30:00Z</published>
+    <summary>The first Atom episode.</summary>
+    <link rel="enclosure"
+          type="audio/mpeg"
+          length="45678901"
+          href="https://example.org/audio/atom-episode-1.mp3"/>
+  </entry>
+</feed>

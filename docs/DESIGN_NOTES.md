@@ -205,6 +205,35 @@ attribute as the source of truth for the component tree.
 
 ---
 
+## Environment variables do not load themselves
+
+`./mvnw test` runs the Spring context against the live Supabase database,
+which means `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`,
+`SPRING_DATASOURCE_PASSWORD` and `SUPABASE_JWKS_URI` must all be present in
+the process environment. Maven does not read `backend/.env`. A fresh
+shell without the variables set will fail with:
+
+    Driver org.postgresql.Driver claims to not accept jdbcUrl,
+    ${SPRING_DATASOURCE_URL}
+
+That error means the placeholder was resolved to itself, which is what
+`application.yaml` does when the environment variable is absent and no
+default is defined. It is not a bug in the JDBC configuration, the
+migration, or the entity mapping. It is a missing variable.
+
+Three ways to load them:
+
+- **direnv.** `backend/.envrc` contains `dotenv`, which loads `.env` when
+  the shell enters the directory. `direnv allow` once per machine. The
+  prompt shows the loaded variables on entry.
+- **IntelliJ EnvFile plugin.** Configure the run and test configurations
+  to read `backend/.env`. Works for the green play button and does not
+  affect the terminal.
+- **Manual export.** `set -a; source .env; set +a` before `./mvnw`.
+
+CI never hits this: GitHub Actions passes the values as workflow `env:`
+entries, and Cloud Run receives them as service configuration.
+
 ## On AI-assisted development
 
 This project is built with AI assistance (Cline, Claude, ChatGPT/DeepSeek).

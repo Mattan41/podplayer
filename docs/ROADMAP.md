@@ -34,22 +34,26 @@ Step 4 is delivered as six phases. See `docs/roadmap/` for each.
 
 | Phase | Name | Depends on |
 | --- | --- | --- |
-| A | [Domain model](roadmap/domain-model.md) | Step 3 |
-| B | [Feed ingestion](roadmap/feed-ingestion.md) | Phase A |
+| A | [Domain model](roadmap/domain-model.md) — **done** | Step 3 |
+| B | [Feed ingestion](roadmap/feed-ingestion.md) — **done** | Phase A |
 | C | [Library UI](roadmap/library-ui.md) | Phase B |
 | D | [Playback engine](roadmap/playback-engine.md) | Phase A (playback state schema), Phase C |
 | E | [Playback state](roadmap/playback-state.md) | Phase D |
 | F | [PWA and Media Session](roadmap/pwa-media-session.md) | Phase E |
 
 ### Phase A — Domain model
+
 The `Podcast`, `Episode`, `Subscription` and `PlaybackState` entities,
 their Flyway migration, and their repositories. No ingestion, no
 frontend. Verified by `./mvnw test`.
 
 ### Phase B — Feed ingestion
+
 Parse RSS and Atom feeds, create `Podcast` and `Episode` rows, wire
 subscribe and refresh endpoints. Introduces one backend dependency; see
 the phase file for the `DECISIONS.md` entry that must accompany it.
+Done: Rome 2.1.0, `RssFeedParser`, `PodcastService`, `PodcastController`,
+`RssFeedParserTest`, and the first `docs/api/` file.
 
 ### Phase C — Library UI
 Frontend: subscription list and episode list. No playback yet.
@@ -94,5 +98,6 @@ reason, not as a dedicated phase.
 - **Remove `CounterController`** once the player is live.
 - **Remove the `counter` table** via a Flyway migration once the counter
   is gone.
-- **`docs/api/`** is created when the first podcast endpoint exists.
-  One file per feature, matching the level of detail in `DECISIONS.md`.
+- **`docs/api/`** exists as of Phase B, starting with `podcasts.md`. Add
+  one file per feature as endpoints arrive, matching the level of detail
+  in `DECISIONS.md`.

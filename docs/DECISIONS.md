@@ -575,3 +575,41 @@ unchanged.
   backlog item, not a plan, so the indirection is not paid for today.
 
 
+## 17. RSS parsing uses Rome
+
+**Context.** Phase B ingests podcast feeds, which arrive as RSS 2.0, RSS
+1.0, or Atom. The formats overlap but are not identical, and real feeds
+routinely deviate: missing GUIDs, non-ASCII in titles, escaped HTML in
+descriptions, self-closing tags that are not valid XML, BOM at the start
+of the document. Handling those deviations is the bulk of the work, and
+it is not work unique to this project.
+
+**Alternatives considered.**
+
+| Option | What it gives | What it costs |
+| --- | --- | --- |
+| `com.rometools:rome` | RSS 0.9x/1.0/2.0 and Atom; handles BOM, encoding, malformed XML; actively maintained; widely used | ~600 KB of classes, most of which the project will not use |
+| `com.github.dorkbox:RSSReader` | Small API, single-purpose | Fewer formats supported, smaller community, less tolerant of bad feeds |
+| Hand-written StAX parser | No dependency | Re-implements the deviation handling above; likely to ship bugs the community already solved |
+
+**Decision.** Use Rome. It is the standard choice for Java podcast and
+feed readers, and it is tolerant of exactly the malformed input a real
+subscription flow encounters.
+
+**Consequence.** One new backend dependency. It lives in `pom.xml`
+alongside the existing Spring Boot starters and is versioned via Spring
+Boot's dependency management where possible (Rome is not managed by the
+Spring Boot BOM). The
+`RssFeedParser` service is a thin wrapper around Rome's
+`SyndFeedInput`; the parser output is mapped to the project's own
+`ParsedFeed` and `ParsedEpisode` records so that no Rome types leak into
+the domain layer. If Rome is ever replaced, only the wrapper changes.
+
+**Impact on `subscription` and `playback_state` keys.** None. The feed
+parsing is orthogonal to the schema.
+
+**Review trigger.** If Rome's transitive dependency tree ever conflicts
+with a Spring Boot upgrade, or if the project's feed parsing needs grow
+into podcast-specific features Rome does not provide (chapter markers,
+transcripts), revisit. Until then, Rome is the deliberate choice and the
+cost is accepted.

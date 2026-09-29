@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Fixture for RssFeedParserTest: a small RSS 2.0 podcast feed in the shape real
+  feeds use, including the parts a feed reader has to defend against.
+
+  item 1  guid present, audio enclosure, itunes:duration, itunes:image
+  item 2  guid present but blank, audio enclosure -> guid falls back to the
+          enclosure URL (deliberately no link, so nothing else can be picked up)
+  item 3  guid present, no enclosure at all -> the item is skipped
+  item 4  audio enclosure whose type is not audio/*, blank guid -> the enclosure
+          is still usable, so the item must survive
+
+  Only <itunes:image> is supplied, never a standard <image><url>, and the author
+  is stated only as <itunes:author>. Both therefore can only come from Rome's
+  foreign markup. <managingEditor> is present as well, to keep the fixture a
+  valid RSS 2.0 channel, but Rome does not map it to an author.
+-->
+<rss version="2.0"
+     xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+  <channel>
+    <title>Test Podcast</title>
+    <link>https://example.org/test-podcast</link>
+    <description>A feed used by the parser test.</description>
+    <language>en</language>
+    <managingEditor>test@example.org (Test Author)</managingEditor>
+    <itunes:author>Test Author</itunes:author>
+    <itunes:image href="https://example.org/podcast-artwork.png"/>
+
+    <item>
+      <title>Episode One</title>
+      <description>The first episode.</description>
+      <guid isPermaLink="false">episode-1</guid>
+      <pubDate>Mon, 05 Jan 2026 09:00:00 GMT</pubDate>
+      <itunes:duration>1:02:03</itunes:duration>
+      <itunes:image href="https://example.org/episode-1-artwork.png"/>
+      <enclosure url="https://example.org/audio/episode-1.mp3"
+                 length="12345678"
+                 type="audio/mpeg"/>
+    </item>
+
+    <item>
+      <title>Episode Two</title>
+      <description>The second episode, with no guid of its own.</description>
+      <guid isPermaLink="false"></guid>
+      <pubDate>Tue, 06 Jan 2026 09:00:00 GMT</pubDate>
+      <enclosure url="https://example.org/audio/episode-2.mp3"
+                 length="23456789"
+                 type="audio/mpeg"/>
+    </item>
+
+    <item>
+      <title>Announcement Without Audio</title>
+      <description>A text-only announcement, not an episode.</description>
+      <guid isPermaLink="false">announcement-1</guid>
+      <pubDate>Wed, 07 Jan 2026 09:00:00 GMT</pubDate>
+    </item>
+
+    <item>
+      <title>Episode Four</title>
+      <description>An enclosure that is not typed as audio.</description>
+      <guid isPermaLink="false"></guid>
+      <enclosure url="https://example.org/audio/episode-4.mp3"
+                 length="34567890"
+                 type="application/octet-stream"/>
+    </item>
+  </channel>
+</rss>
