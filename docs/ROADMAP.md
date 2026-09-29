@@ -36,7 +36,7 @@ Step 4 is delivered as six phases. See `docs/roadmap/` for each.
 | --- | --- | --- |
 | A | [Domain model](roadmap/domain-model.md) — **done** | Step 3 |
 | B | [Feed ingestion](roadmap/feed-ingestion.md) — **done** | Phase A |
-| C | [Library UI](roadmap/library-ui.md) | Phase B |
+| C | [Library UI](roadmap/library-ui.md) — code complete, on-site check pending | Phase B |
 | D | [Playback engine](roadmap/playback-engine.md) | Phase A (playback state schema), Phase C |
 | E | [Playback state](roadmap/playback-state.md) | Phase D |
 | F | [PWA and Media Session](roadmap/pwa-media-session.md) | Phase E |
@@ -56,7 +56,15 @@ Done: Rome 2.1.0, `RssFeedParser`, `PodcastService`, `PodcastController`,
 `RssFeedParserTest`, and the first `docs/api/` file.
 
 ### Phase C — Library UI
-Frontend: subscription list and episode list. No playback yet.
+
+Frontend: subscription list, episode list, add-podcast form, and the SPA
+fallback for the dynamic route. `npm run lint` and `npm run build` both
+exit 0, and the export contains `/podcasts.html` plus one placeholder
+`/podcasts/0.html`. Three of the phase file's acceptance criteria need a
+signed-in session on the deployed site — subscribing to a real feed, a
+hard reload on `/podcasts/<id>`, and the 403 view — so the phase is not
+marked done until those are observed. See `DECISIONS.md` entry 18 for
+what the export does to `404.html`.
 
 ### Phase D — Playback engine
 The `PlayerProvider`, the `<audio>` element, the mini and full player

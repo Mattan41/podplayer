@@ -613,3 +613,50 @@ with a Spring Boot upgrade, or if the project's feed parsing needs grow
 into podcast-specific features Rome does not provide (chapter markers,
 transcripts), revisit. Until then, Rome is the deliberate choice and the
 cost is accepted.
+
+## 18. Next.js owns `out/404.html`, so the project's SPA fallback does not ship
+
+**Context.** Phase C added a dynamic route (`/podcasts/[id]`) to a site hosted on
+GitHub Pages, which serves one file per path and has no rewrite rules. The plan
+was the classic fallback: `frontend/public/404.html` parks the requested path in
+`sessionStorage`, redirects to `/`, and `app/page.tsx` restores the path on
+mount. `docs/roadmap/library-ui.md` lists that file as a deliverable and notes it
+is the same one Phase F would have needed.
+
+**Measurement.** With `output: 'export'`, Next 16 also writes `out/404.html`, from
+the `_not-found` route, after it has copied `public/`. Measured on the Phase C
+build:
+
+- `public/404.html` is 1587 bytes and contains `spa-fallback-path`.
+- `out/404.html` is 11116 bytes, byte-identical to `out/_not-found.html` (`cmp`
+  reports equal), with zero occurrences of `spa-fallback-path` and zero
+  occurrences of "podcasts".
+
+The file that ships is therefore Next's application shell, not the project's
+redirect page, and the `sessionStorage` handshake never runs. The restore effect
+in `app/page.tsx` is unreachable code in the deployed artifact.
+
+**Decision.** Keep both files as they are: Next's `404.html` ships, and the
+project's version stays in `public/` where it costs nothing and is the mechanism
+if it is ever needed. Losing the redirect is not necessarily losing the
+behaviour, because Next's 404.html *is* the app shell: a browser that lands on it
+stays at the requested URL, which is stronger than the redirect dance — no flash
+of the wrong page and no storage round trip. The export also contains
+segment-level payloads for the dynamic route
+(`out/podcasts/__next.podcasts.__PAGE__.txt`, `out/podcasts/__next._full.txt`,
+`out/podcasts/__next._tree.txt`), which is what a client-side render of an
+arbitrary id would need.
+
+**Consequence — unresolved, and deliberately so.** Which mechanism actually
+renders `/podcasts/42` on a hard reload is unverified, because this phase's
+verification is the build and not the interaction. There are two possible
+outcomes on the deployed site and one manual check decides between them: either
+Next's shell resolves the route, in which case `public/404.html` and the restore
+effect can both be deleted (the preferred outcome), or it does not, in which case
+the fix is a post-build `cp public/404.html out/404.html` in
+`.github/workflows/deploy-frontend.yml`, which makes the project's fallback win
+at the cost of the redirect round trip.
+
+**Review trigger.** Resolve this entry as soon as the deployed behaviour is
+observed. Until then the limitation is accepted and recorded rather than
+resolved.

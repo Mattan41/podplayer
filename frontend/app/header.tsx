@@ -30,6 +30,12 @@ export default function Header() {
         {isLoading ? null : user ? (
           <>
             <span className="hidden text-sm text-muted sm:inline">{user.email}</span>
+            <Link
+              href="/podcasts"
+              className="font-mono text-xs tracking-wide text-fg underline underline-offset-4"
+            >
+              Podcasts
+            </Link>
             {role === "ADMIN" ? (
               <Link
                 href="/admin"
