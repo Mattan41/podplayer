@@ -55,51 +55,33 @@ These steps are performed **manually** against the Supabase project. They are de
 
 ### 1. Enable Row Level Security
 
-Flyway creates `allowed_users`, `counter`, and `flyway_schema_history` in the `public` schema. Since `V2__create_podcast_tables.sql` it also creates `podcast`, `episode`, `subscription`, and `playback_state`. Supabase exposes `public` through PostgREST, so enable Row Level Security on all of them:
+Seven tables live in the `public` schema. `allowed_users` and the four podcast tables (`podcast`, `episode`, `subscription`, `playback_state`) are created by the Flyway migrations `V1__create_allowed_users.sql` and `V2__create_podcast_tables.sql`, which the backend applies on startup. `counter` pre-existed and is absorbed by `spring.flyway.baseline-on-migrate`; `flyway_schema_history` is Flyway's own bookkeeping table.
 
-```sql
-ALTER TABLE allowed_users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE counter ENABLE ROW LEVEL SECURITY;
-ALTER TABLE flyway_schema_history ENABLE ROW LEVEL SECURITY;
-ALTER TABLE podcast ENABLE ROW LEVEL SECURITY;
-ALTER TABLE episode ENABLE ROW LEVEL SECURITY;
-ALTER TABLE subscription ENABLE ROW LEVEL SECURITY;
-ALTER TABLE playback_state ENABLE ROW LEVEL SECURITY;
-```
+Supabase exposes `public` through PostgREST, so all seven need Row Level Security enabled and a deny-all policy for the `anon` and `authenticated` roles. The backend is unaffected: it connects over JDBC as the `postgres` role, which bypasses RLS.
 
-Then add a deny-all policy for the `anon` and `authenticated` roles that PostgREST uses. The backend is unaffected: it connects over JDBC as the `postgres` role, which bypasses RLS.
-
-```sql
-CREATE POLICY "Deny anon access" ON allowed_users
-    FOR ALL TO anon, authenticated
-    USING (false) WITH CHECK (false);
-
-CREATE POLICY "Deny anon access" ON counter
-    FOR ALL TO anon, authenticated
-    USING (false) WITH CHECK (false);
-
-CREATE POLICY "Deny anon access" ON flyway_schema_history
-    FOR ALL TO anon, authenticated
-    USING (false) WITH CHECK (false);
-
-CREATE POLICY "Deny anon access" ON podcast
-    FOR ALL TO anon, authenticated
-    USING (false) WITH CHECK (false);
-
-CREATE POLICY "Deny anon access" ON episode
-    FOR ALL TO anon, authenticated
-    USING (false) WITH CHECK (false);
-
-CREATE POLICY "Deny anon access" ON subscription
-    FOR ALL TO anon, authenticated
-    USING (false) WITH CHECK (false);
-
-CREATE POLICY "Deny anon access" ON playback_state
-    FOR ALL TO anon, authenticated
-    USING (false) WITH CHECK (false);
-```
+The SQL is kept in [`db-bootstrap.sql`](./db-bootstrap.sql), steps 1 and 2. It is deliberately not repeated here, so that there is a single canonical copy to run.
 
 > **Required before the frontend anon key is deployed.** The anon key is public — it is shipped to every browser. RLS is the only thing preventing unauthorised reads through PostgREST.
+
+All seven tables must report `relrowsecurity = t`:
+
+```sql
+SELECT n.nspname AS schema, c.relname, c.relrowsecurity
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE c.relname IN (
+        'allowed_users',
+        'counter',
+        'flyway_schema_history',
+        'podcast',
+        'episode',
+        'subscription',
+        'playback_state'
+      )
+ORDER BY n.nspname, c.relname;
+```
+
+Run the file once against a fresh project, after the backend has started successfully and Flyway has applied V1 and V2.
 
 ### 2. Insert the First Administrator
 
@@ -123,13 +105,7 @@ In the Supabase dashboard, under **Authentication → URL Configuration**:
 
 ### 4. Verify
 
-All seven tables must report `relrowsecurity = t`:
-
-```sql
-SELECT relname, relrowsecurity FROM pg_class
-WHERE relname IN ('allowed_users', 'counter', 'flyway_schema_history',
-                  'podcast', 'episode', 'subscription', 'playback_state');
-```
+The RLS query in step 1 must report `relrowsecurity = t` for all seven tables.
 
 The administrator row must be present:
 
