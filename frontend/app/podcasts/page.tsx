@@ -155,7 +155,7 @@ export default function PodcastsPage() {
             {podcasts.map((podcast) => (
               <li key={podcast.podcastId} className="border-b border-fg last:border-b-0">
                 <Link
-                  href={`/podcasts/${podcast.podcastId}`}
+                  href={`/podcasts/view?id=${podcast.podcastId}`}
                   className="flex items-center gap-4 px-6 py-4 focus:outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-cta"
                 >
                   {/*

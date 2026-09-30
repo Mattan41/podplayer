@@ -660,3 +660,35 @@ at the cost of the redirect round trip.
 **Review trigger.** Resolve this entry as soon as the deployed behaviour is
 observed. Until then the limitation is accepted and recorded rather than
 resolved.
+
+## 19. Podcast detail is a static route with a query parameter
+
+**Context.** Entry 18 measured that the project's `public/404.html` never
+ships: Next writes its own `out/404.html` from the `_not-found` route after
+copying `public/`, so the `sessionStorage` fallback and its restore effect in
+`app/page.tsx` were dead code in the deployed artifact. The dynamic route
+`/podcasts/[id]` was the reason all of it existed, and it had a second
+problem independent of the fallback: `output: 'export'` writes one file per
+route, so the build could only emit a single placeholder (`/podcasts/0.html`).
+Real ids are assigned by the database on first subscription and cannot be
+enumerated at build time, so GitHub Pages had no file to serve for
+`/podcasts/42` no matter which `404.html` won.
+
+**Decision.** Replace the dynamic segment with one static route that carries
+the id as a query parameter: `/podcasts/view?id=42`. The route shell
+(`app/podcasts/view/page.tsx`) has no `generateStaticParams` and wraps the
+client `EpisodesView` in a `Suspense` boundary, because `useSearchParams`
+must be readable while the shell is prerendered. `EpisodesView` reads the id
+from `useSearchParams().get("id")`; a missing or non-positive-integer id
+renders "Podcast not found" with a link back to `/podcasts`. Every link to a
+podcast now points at `/podcasts/view?id={id}`. `public/404.html` and the
+`sessionStorage` restore effect are deleted, since the route is static and
+no fallback is needed.
+
+**Consequence.** This supersedes entry 18. The export contains exactly one
+podcast-detail file (`/podcasts/view.html`) that serves every id, so a hard
+reload works without any host-side rewrite or fallback. The cost is the
+query-string shape in the address bar, and that a link is only shareable as
+`/podcasts/view?id=42` rather than as a path. Entry 18's unresolved question
+— which `404.html` wins on a deep link — no longer arises, because there is
+no file-per-id to miss.

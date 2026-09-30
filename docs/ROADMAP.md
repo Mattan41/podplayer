@@ -57,14 +57,15 @@ Done: Rome 2.1.0, `RssFeedParser`, `PodcastService`, `PodcastController`,
 
 ### Phase C — Library UI
 
-Frontend: subscription list, episode list, add-podcast form, and the SPA
-fallback for the dynamic route. `npm run lint` and `npm run build` both
-exit 0, and the export contains `/podcasts.html` plus one placeholder
-`/podcasts/0.html`. Three of the phase file's acceptance criteria need a
-signed-in session on the deployed site — subscribing to a real feed, a
-hard reload on `/podcasts/<id>`, and the 403 view — so the phase is not
-marked done until those are observed. See `DECISIONS.md` entry 18 for
-what the export does to `404.html`.
+Frontend: subscription list, episode list, add-podcast form. `npm run lint`
+and `npm run build` both exit 0, and the export contains `/podcasts.html` and
+`/podcasts/view.html` — the podcast detail is a single static route that reads
+the id from `?id=`, so no dynamic segment is emitted. Three of the phase
+file's acceptance criteria need a signed-in session on the deployed site —
+subscribing to a real feed, a hard reload on the detail route, and the 403
+view — so the phase is not marked done until those are observed. See
+`DECISIONS.md` entries 18 and 19 for why the dynamic route and its SPA
+fallback were replaced.
 
 ### Phase D — Playback engine
 The `PlayerProvider`, the `<audio>` element, the mini and full player

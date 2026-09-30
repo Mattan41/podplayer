@@ -10,18 +10,15 @@ Frontend: subscription list, episode list, add-podcast form. No playback.
   lines.
 - `frontend/app/podcasts/page.tsx` — the subscription list and the
   add-podcast form.
-- `frontend/app/podcasts/[id]/page.tsx` — the episode list for one podcast,
-  with a refresh button.
+- `frontend/app/podcasts/view/page.tsx` — the episode list for one podcast,
+  with a refresh button. The podcast id is a query parameter
+  (`/podcasts/view?id=42`), not a path segment, so the route stays static.
 - `frontend/app/header.tsx` — a link to /podcasts, visible only when the
   user is authenticated.
 - `frontend/app/page.tsx` — the counter remains the landing page for now.
   A link to /podcasts is added to the counter card so the counter stays
   reachable as a health check. When the counter is removed later, this
   link is replaced by the podcast list itself.
-- `frontend/public/404.html` — a fallback that redirects any unmatched
-  path to the SPA and preserves the URL, so that a hard reload on
-  `/podcasts/42` works. This was originally planned for the PWA phase; the
-  dynamic route in this phase makes it necessary now.
 
 ## Acceptance criteria
 
@@ -31,14 +28,13 @@ Frontend: subscription list, episode list, add-podcast form. No playback.
 - Logged in with an ADMIN account on the deployed site, the user can
   subscribe to a real feed by pasting its URL, see the podcast in the
   list, click it, and see its episodes.
-- A hard reload on `/podcasts/<id>` returns the app, not a GitHub Pages
-  404 page.
-- A non-subscribed user cannot reach `/podcasts/<id>` for a podcast they
+- A hard reload on `/podcasts/view?id=<id>` returns the app, not a GitHub
+  Pages 404 page.
+- A non-subscribed user cannot reach the detail route for a podcast they
   do not follow. Backend returns 403; the frontend surfaces it as an
   inline error, not a blank page.
 - The count of static routes in `out/` includes `/podcasts.html` and
-  `/podcasts/[id].html` (or whatever name Next emits for the dynamic
-  segment).
+  `/podcasts/view.html`.
 
 ## Out of scope
 
@@ -49,15 +45,15 @@ Frontend: subscription list, episode list, add-podcast form. No playback.
 
 ## Notes
 
-- **Static export and dynamic routes.** Next.js `output: 'export'`
-  generates one HTML per route segment. A dynamic segment produces a
-  single `[id].html` file and relies on client-side routing to render the
-  right content once the JS bundle loads. GitHub Pages serves that file
-  only if the requested path resolves to it; without a fallback, a hard
-  reload on `/podcasts/42` returns GitHub Pages' own 404. The
-  `404.html` fallback in this phase fixes that, and is the same file
-  Phase F would have needed later. Moving it forward changes nothing
-  about how Phase F will work.
+- **Static export and the detail route.** Next.js `output: 'export'`
+  generates one HTML file per route. A dynamic segment (`/podcasts/[id]`)
+  could only emit a single placeholder, because the real ids are assigned
+  by the database on first subscription and are not known at build time;
+  GitHub Pages, which serves files and has no rewrite rules, would then
+  have nothing to serve for a deep link such as `/podcasts/42`. The detail
+  route is therefore one static file — `/podcasts/view.html` — that reads
+  the id from the query string (`/podcasts/view?id=42`). No SPA fallback is
+  needed. See `DECISIONS.md` entries 18 and 19.
 - **Data shapes.** The four DTO types in `frontend/lib/api/podcast.ts`
   mirror `PodcastSummaryDto`, `PodcastDto`, `EpisodeDto` and
   `SubscribeResult` from `docs/api/podcasts.md`. Update both files

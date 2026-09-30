@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   listEpisodes,
   refreshPodcast,
@@ -78,16 +78,22 @@ function describeAddedEpisodes(count: number): string {
  * The episode list for one podcast.
  *
  * A client component because the whole page is a fetch on mount. It is rendered
- * by the server component in `page.tsx`, which owns `generateStaticParams`:
- * Next.js rejects a file that declares both "use client" and that function.
+ * by the server component in `page.tsx`, which wraps it in a Suspense boundary
+ * so `useSearchParams` can be read while the shell is prerendered.
  *
- * The podcast id comes from the URL through `useParams()` rather than through
- * props, because props for a dynamic segment are a Promise in the App Router and
- * this component holds the hooks.
+ * The podcast id comes from the query string (`/podcasts/view?id=42`) rather
+ * than from a path segment, because a static export can only emit one file per
+ * route and the ids are not known at build time. An id that is missing or not a
+ * positive integer reads as "Podcast not found".
  */
 export default function EpisodesView() {
-  const params = useParams<{ id: string }>();
-  const podcastId = Number(params.id);
+  const searchParams = useSearchParams();
+  const rawId = searchParams.get("id");
+  const podcastId = Number(rawId);
+  /*
+   * `Number(null)` and `Number("")` are both 0, so a missing or empty id fails
+   * the positive-integer test without a separate null check.
+   */
   const isValidId = Number.isInteger(podcastId) && podcastId > 0;
 
   const [episodes, setEpisodes] = useState<EpisodeDto[]>([]);
@@ -160,8 +166,8 @@ export default function EpisodesView() {
   };
 
   /*
-   * Derived during render, not set in the effect: an id that is not a positive
-   * integer can never reach the backend, and /podcasts/abc should read as "not
+   * Derived during render, not set in the effect: an id that is missing or not
+   * a positive integer can never reach the backend, and it should read as "not
    * found" rather than as an error sentence.
    */
   const blockedReason = !isValidId ? "not-found" : blocked;
