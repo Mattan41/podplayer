@@ -47,13 +47,6 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://rdpysseyodzuwnghvanc.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
-      # Next writes its own out/404.html from the _not-found route,
-      # overwriting public/404.html. This step restores the project's
-      # fallback so the sessionStorage handshake in app/page.tsx runs.
-      # See docs/DECISIONS.md entry 18.
-      - name: Use custom 404
-        run: cp public/404.html out/404.html
-
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
