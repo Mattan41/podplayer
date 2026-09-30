@@ -717,6 +717,7 @@ information.
 
 The endpoint responds in milliseconds when the container is warm, and
 its only job when cold is to start the container. It is not a readiness
+or liveness probe and does not report dependencies.
 
 ## 21. `/` is the library; the counter is retired as a landing page
 
@@ -777,4 +778,57 @@ removed in this phase, so the cache is returned regardless of age; a
 Revisit if staleness becomes a real annoyance, which would mean
 re-adding a TTL and surfacing it in the UI.
 
-or liveness probe and does not report dependencies.
+## 23. The header collapses into a disclosure below `md`
+
+**Context.** The header was a single non-wrapping flex row holding the brand,
+the e-mail, three navigation links, sign-out and the theme toggle. The e-mail
+was already hidden below `sm`, but everything else still competed for one line,
+and the row did not wrap. On a 375 px viewport the theme toggle, the right-most
+control, was pushed past the viewport edge and rendered clipped. The same class
+of bug — one layout cannot serve a phone and a desktop — was already solved once
+for the admin allowlist in entry 9.
+
+**Decision.** Keep one row at `md` and above, and below `md` collapse the
+navigation into a disclosure opened by an icon button in the header. The
+disclosure contains the e-mail, the same three links and sign-in/out, and
+expands in the document flow under the header rather than floating over the
+page. The theme toggle stays visible at every width and sits immediately before
+the menu button: a single short label fits where the full navigation does not,
+so the mode switch remains one tap away on a phone.
+
+The breakpoint is `md`, matching entry 9, and the e-mail's `sm:inline` was
+changed to `md:inline` so exactly one layout is active at a time. The two
+layouts share one `HeaderNav` component rather than two copies of the link list,
+which is the drift the base component layer was extracted to stop
+(`frontend/components/base/README.md`).
+
+**Why no headless primitive.** `docs/STYLEGUIDE.md` §7 and `ARCHITECTURE.md`
+§4.5 reserve Radix for complex interactions (Slider, Dialog, Tabs). A
+navigation disclosure is not one: it is a button that toggles links that are
+already in the document flow, with no focus trap, no portal and no positioning.
+Entry 1 still applies — Radix arrives with the first component that genuinely
+needs it, which is the player scrubber or a dialog, not this.
+
+**Consequence.**
+
+- The links are reachable in the tab order in both layouts; the inactive
+  layout's container is `display: none` (`hidden md:flex` / `md:hidden`) and is
+  therefore not exposed to assistive technology, following entry 9.
+- The disclosure button carries `aria-expanded`, `aria-controls` and a
+  label that flips between "Open menu" and "Close menu". Escape closes it, and
+  every link click inside it closes it.
+- The menu button is an icon only, so it needs the `aria-label`; the glyph
+  (three rules closed, a cross open) is an inline SVG that strokes
+  `currentColor`. No icon dependency is introduced, and the stroke follows the
+  `fg` token because the button owns its colour.
+- The disclosure is not rendered while `isLoading`, so a signed-out visitor
+  never sees an empty panel.
+
+**Alternatives considered.**
+
+| Option | Why not |
+| --- | --- |
+| Let the row wrap | It turns one broken row into two broken rows; the toggle would still be the element that spills, and the brand-to-nav relationship would be lost. |
+| `overflow-x-auto` on the header | Hides the problem behind a scrollbar and reintroduces horizontal scrolling, which `docs/DESIGN_NOTES.md` treats as a measurable defect (`scrollWidth == clientWidth`). |
+| Radix `DropdownMenu` | A dependency and a positioning/portal model for a disclosure that fits in the flow. See entry 1. |
+| Icons for every link instead of text | Four nested meanings to learn, and `docs/STYLEGUIDE.md` §4 keeps the header typographic. The one icon that remains (the menu glyph) is conventional. |
