@@ -36,7 +36,7 @@ Step 4 is delivered as six phases. See `docs/roadmap/` for each.
 | --- | --- | --- |
 | A | [Domain model](roadmap/domain-model.md) — **done** | Step 3 |
 | B | [Feed ingestion](roadmap/feed-ingestion.md) — **done** | Phase A |
-| C | [Library UI](roadmap/library-ui.md) — code complete, on-site check pending | Phase B |
+| C | [Library UI](roadmap/library-ui.md) — code complete, on-site check pending; C.5 complete | Phase B |
 | D | [Playback engine](roadmap/playback-engine.md) | Phase A (playback state schema), Phase C |
 | E | [Playback state](roadmap/playback-state.md) | Phase D |
 | F | [PWA and Media Session](roadmap/pwa-media-session.md) | Phase E |
@@ -67,7 +67,10 @@ view — so the phase is not marked done until those are observed. See
 `DECISIONS.md` entries 18 and 19 for why the dynamic route and its SPA
 fallback were replaced. C.5 followed in the same step: the landing page
 (`/`) is now the subscription list, and the frontend counter page is
-retired. See `DECISIONS.md` entry 21.
+retired. See `DECISIONS.md` entry 21. C.5's second half added the
+`PodcastSource` interface and a localStorage read cache behind it, so a
+page the user has visited before paints from cache before the network
+answers; see `DECISIONS.md` entry 22. Phase D (playback engine) is next.
 
 ### Phase D — Playback engine
 The `PlayerProvider`, the `<audio>` element, the mini and full player

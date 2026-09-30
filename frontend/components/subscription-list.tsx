@@ -2,12 +2,9 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import {
-  listSubscriptions,
-  subscribe,
-  PodcastApiError,
-  type PodcastSummaryDto,
-} from "@/lib/api/podcast";
+import { PodcastApiError, type PodcastSummaryDto } from "@/lib/api/podcast";
+import { usePodcastSource } from "@/lib/podcast-source";
+import { SUBSCRIPTIONS_CACHE_KEY, withCache } from "@/lib/podcast-cache";
 import { BaseButton, BaseCard, BaseField, BaseInput } from "@/components/base";
 
 const NOT_AUTHENTICATED = "Not authenticated";
@@ -57,12 +54,15 @@ function formatLastFetched(value: string | null): string {
  * points at the header's sign-in button instead of a red sentence.
  */
 export default function SubscriptionList() {
+  const source = usePodcastSource();
+
   const [podcasts, setPodcasts] = useState<PodcastSummaryDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [reloadToken, setReloadToken] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isSignedOut, setIsSignedOut] = useState(false);
+  const [isShowingCached, setIsShowingCached] = useState(false);
 
   const [feedUrl, setFeedUrl] = useState("");
   const [isAdding, setIsAdding] = useState(false);
@@ -70,19 +70,39 @@ export default function SubscriptionList() {
   useEffect(() => {
     let isCancelled = false;
 
+    const { cached, fresh } = withCache(SUBSCRIPTIONS_CACHE_KEY, () => source.listSubscriptions());
+
     const load = async () => {
+      /*
+       * The cached list paints before the network answers, when there is one.
+       * Kept in the async load rather than directly in the effect body:
+       * react-hooks/set-state-in-effect rejects the direct form, and this is
+       * where the effect already performs its state updates.
+       */
+      if (cached !== null) {
+        setPodcasts(cached);
+        setIsLoading(false);
+      }
+
       try {
-        const loaded = await listSubscriptions();
+        const loaded = await fresh;
         if (!isCancelled) {
           setPodcasts(loaded);
           setError(null);
+          setIsShowingCached(false);
         }
       } catch (loadError) {
         if (isCancelled) {
           return;
         }
         if (isNotAuthenticated(loadError)) {
+          // No session is a state of its own and wins over the cache: the
+          // signed-out card renders instead of a list the user cannot refresh.
           setIsSignedOut(true);
+        } else if (cached !== null) {
+          // The fetch failed but the user has seen this list before. Keep it and
+          // say so, rather than replacing it with an error.
+          setIsShowingCached(true);
         } else {
           setError(describeError(loadError, LOAD_ERROR));
         }
@@ -98,7 +118,7 @@ export default function SubscriptionList() {
     return () => {
       isCancelled = true;
     };
-  }, [reloadToken]);
+  }, [reloadToken, source]);
 
   const addPodcast = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -112,7 +132,7 @@ export default function SubscriptionList() {
     setError(null);
     setNotice(null);
     try {
-      const result = await subscribe(url);
+      const result = await source.subscribe(url);
       setFeedUrl("");
       setNotice(
         result.alreadySubscribed
@@ -224,6 +244,8 @@ export default function SubscriptionList() {
           </ul>
         )}
       </BaseCard>
+
+      {isShowingCached ? <p className="text-sm text-muted">Showing cached data</p> : null}
     </main>
   );
 }

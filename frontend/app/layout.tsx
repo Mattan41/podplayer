@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Header from "./header";
 import WakingNotice from "./waking-notice";
 import { AuthProvider } from "@/lib/auth-context";
+import { PodcastSourceProvider } from "@/lib/podcast-source";
 import { ThemeProvider } from "@/lib/theme-context";
 import "./globals.css";
 
@@ -51,9 +52,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col bg-bg text-fg">
         <ThemeProvider>
           <AuthProvider>
-            <Header />
-            <WakingNotice />
-            {children}
+            <PodcastSourceProvider>
+              <Header />
+              <WakingNotice />
+              {children}
+            </PodcastSourceProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

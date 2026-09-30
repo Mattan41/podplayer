@@ -78,18 +78,14 @@ export function setCached<T>(key: string, value: T): void {
  * Returns the cached value synchronously and starts the fetch in parallel.
  *
  * The caller renders `cached` at once (or falls through when it is `null`) and
- * replaces it when `fresh` resolves. The fetch is unconditional: even a value
- * newer than `ttlMs` is refreshed, so the rendered data converges on the
- * server's answer on every mount.
- *
- * @param ttlMs accepted for the caller's intent. It never gates the return: a
- *              value older than the window is still better than an empty screen
- *              while a cold container starts. A later change may use it to
- *              decide when to stop showing the cache.
+ * replaces it when `fresh` resolves. The fetch is unconditional: a `null` cache
+ * still fetches, and so does a value the previous mount already wrote, so the
+ * rendered data converges on the server's answer on every mount. The cache is
+ * returned regardless of age; a future change that cares about staleness can add
+ * a window back here.
  */
 export function withCache<T>(
   key: string,
-  ttlMs: number,
   fetcher: () => Promise<T>,
 ): { cached: T | null; fresh: Promise<T> } {
   const entry = getCached<T>(key);

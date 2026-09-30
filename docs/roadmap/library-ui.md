@@ -2,12 +2,25 @@
 
 Frontend: subscription list, episode list, add-podcast form. No playback.
 
+**Status: C.5 complete.** C.5 added the `PodcastSource` interface and a
+localStorage read cache behind it, and wired both into the list and the
+episode view (`DECISIONS.md` entries 21 and 22). Phase D is next.
+
 ## Deliverables
 
 - `frontend/lib/api/podcast.ts` — types and apiFetch wrappers for the four
   endpoints in `docs/api/podcasts.md`. Both TypeScript types and the
   wrapper functions live here; split later if the file grows past ~200
   lines.
+- `frontend/lib/podcast-source.tsx` — the `PodcastSource` interface (the
+  four operations components call), the context, the provider and the
+  `usePodcastSource()` hook. The provider defaults to the remote source,
+  so it can be mounted without props; a future guest mode supplies its own.
+- `frontend/lib/podcast-source-remote.ts` — the remote `PodcastSource`, a
+  pass-through to `lib/api/podcast.ts` with no logic of its own.
+- `frontend/lib/podcast-cache.ts` — the localStorage read cache:
+  `getCached`, `setCached`, `withCache` and the `podplayer.cache.*` keys.
+  No dependency. `refreshPodcast` is deliberately not cached.
 - `frontend/components/subscription-list.tsx` — the subscription list and
   the add-podcast form, shared by both routes below; there is one copy.
   A missing Supabase session renders a neutral "Sign in to see your

@@ -745,4 +745,36 @@ without a page. Redirect `/` to `/podcasts`, rejected because GitHub Pages
 serves static files with no rewrite rules and a redirect adds a round trip for
 the common case.
 
+
+## 22. Read cache in localStorage, not IndexedDB, not a library
+
+**Context.** Podcast lists and episode lists change rarely. The
+backend runs on Cloud Run and each call is a network round trip, so
+every navigation pays for data the browser has already seen. The
+cold-start UX in entries 20 and 21 solved the wait itself; this entry
+solves the repeat cost.
+
+**Decision.** A small localStorage-backed read cache with
+stale-while-revalidate semantics, behind the `PodcastSource` interface
+added in this phase. No new dependency. The interface exists so a
+future guest mode can supply a local source without touching
+`subscription-list.tsx` or `episodes-view.tsx`.
+
+**Alternatives considered.**
+
+| Option | Why not |
+| --- | --- |
+| IndexedDB | Async, more code, no benefit for 50-100 KB of metadata. Correct choice for offline audio in Phase G. |
+| SWR or TanStack Query | A dependency for a 50-line problem. Adds a mental model (keys, revalidation windows, mutation states) that the project does not need yet. |
+| sessionStorage | Cleared on tab close, defeats the point for a returning user. |
+| HTTP cache only | No control over staleness, no fallback when the network fails. |
+
+**Consequence.** A cold Cloud Run container no longer blocks the first
+render of a page the user has visited before. The cost is that the
+cache can show data older than the server has. The TTL parameter was
+removed in this phase, so the cache is returned regardless of age; a
+"showing cached data" note tells the user when the fresh fetch failed.
+Revisit if staleness becomes a real annoyance, which would mean
+re-adding a TTL and surfacing it in the UI.
+
 or liveness probe and does not report dependencies.

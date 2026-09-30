@@ -3,12 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import {
-  listEpisodes,
-  refreshPodcast,
-  PodcastApiError,
-  type EpisodeDto,
-} from "@/lib/api/podcast";
+import { PodcastApiError, type EpisodeDto } from "@/lib/api/podcast";
+import { usePodcastSource } from "@/lib/podcast-source";
+import { episodesCacheKey, setCached, withCache } from "@/lib/podcast-cache";
 import { BaseButton, BaseCard } from "@/components/base";
 
 const SIGN_IN_ERROR = "Sign in to see this podcast.";
@@ -96,13 +93,15 @@ export default function EpisodesView() {
    */
   const isValidId = Number.isInteger(podcastId) && podcastId > 0;
 
+  const source = usePodcastSource();
+
   const [episodes, setEpisodes] = useState<EpisodeDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [reloadToken, setReloadToken] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [blocked, setBlocked] = useState<"not-subscribed" | "not-found" | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
+  const [isShowingCached, setIsShowingCached] = useState(false);
 
   useEffect(() => {
     if (!isValidId) {
@@ -114,24 +113,45 @@ export default function EpisodesView() {
 
     let isCancelled = false;
 
+    const key = episodesCacheKey(podcastId);
+    const { cached, fresh } = withCache(key, () => source.listEpisodes(podcastId));
+
     const load = async () => {
+      /*
+       * The cached list paints before the network answers, when there is one.
+       * Kept in the async load rather than directly in the effect body:
+       * react-hooks/set-state-in-effect rejects the direct form, and this is
+       * where the effect already performs its state updates.
+       */
+      if (cached !== null) {
+        setEpisodes(cached);
+        setBlocked(null);
+        setIsLoading(false);
+      }
+
       try {
-        const loaded = await listEpisodes(podcastId);
+        const loaded = await fresh;
         if (!isCancelled) {
           setEpisodes(loaded);
           setBlocked(null);
           setError(null);
+          setIsShowingCached(false);
         }
       } catch (loadError) {
         if (isCancelled) {
           return;
         }
         // 403 and 404 are views of their own rather than error sentences: one
-        // offers a way back to the list, the other says what is missing.
+        // offers a way back to the list, the other says what is missing. They
+        // outrank the cache: a podcast the caller cannot read is not shown from
+        // a stale copy.
         if (loadError instanceof PodcastApiError && loadError.status === 403) {
           setBlocked("not-subscribed");
         } else if (loadError instanceof PodcastApiError && loadError.status === 404) {
           setBlocked("not-found");
+        } else if (cached !== null && !isNotAuthenticated(loadError)) {
+          // Network or server failure with a cached list: keep it and say so.
+          setIsShowingCached(true);
         } else {
           setError(describeError(loadError, LOAD_ERROR));
         }
@@ -147,17 +167,25 @@ export default function EpisodesView() {
     return () => {
       isCancelled = true;
     };
-  }, [podcastId, isValidId, reloadToken]);
+  }, [podcastId, isValidId, source]);
 
   const refresh = async () => {
     setIsRefreshing(true);
     setError(null);
     setRefreshMessage(null);
     try {
-      const result = await refreshPodcast(podcastId);
+      const result = await source.refreshPodcast(podcastId);
       setRefreshMessage(describeAddedEpisodes(result.addedEpisodes));
-      setIsLoading(true);
-      setReloadToken((token) => token + 1);
+      /*
+       * The refresh endpoint answers with a count, not the episodes. Read the
+       * list once more and overwrite the cache with it, so the next mount of
+       * this page is instant instead of stale.
+       */
+      const reloaded = await source.listEpisodes(podcastId);
+      setCached(episodesCacheKey(podcastId), reloaded);
+      setEpisodes(reloaded);
+      setBlocked(null);
+      setIsShowingCached(false);
     } catch (refreshError) {
       setError(describeError(refreshError, REFRESH_ERROR));
     } finally {
@@ -242,6 +270,8 @@ export default function EpisodesView() {
           </ul>
         )}
       </BaseCard>
+
+      {isShowingCached ? <p className="text-sm text-muted">Showing cached data</p> : null}
     </main>
   );
 }

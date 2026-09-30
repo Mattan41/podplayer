@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, createElement, useContext, type ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import type {
   EpisodeDto,
   PodcastSummaryDto,
@@ -41,18 +41,14 @@ export type PodcastSourceProviderProps = {
   children: ReactNode;
 };
 
-/**
- * Supplies a {@link PodcastSource} to the tree below it.
- *
- * Built with `createElement` instead of JSX because this file is `.ts`; the
- * provider is the only piece here that would need a `.tsx` extension, and the
- * filename is fixed by the roadmap.
- */
+/** Supplies a {@link PodcastSource} to the tree below it. */
 export function PodcastSourceProvider({
   source = remotePodcastSource,
   children,
 }: PodcastSourceProviderProps) {
-  return createElement(PodcastSourceContext.Provider, { value: source }, children);
+  return (
+    <PodcastSourceContext.Provider value={source}>{children}</PodcastSourceContext.Provider>
+  );
 }
 
 /** @returns the source in scope, or the remote source when none is provided */
