@@ -113,3 +113,13 @@ reason, not as a dedicated phase.
 - **`docs/api/`** exists as of Phase B, starting with `podcasts.md`. Add
   one file per feature as endpoints arrive, matching the level of detail
   in `DECISIONS.md`.
+
+  - **Retire the counter.** Remove CounterController, Counter entity and
+  CounterRepository in one commit. Then add V3__drop_counter.sql that
+  drops the counter table, deploy, and verify. Not urgent, but the
+  backend has carried it since the walking skeleton.
+
+  - **Documentation audit after C.6.** Run the same audit that produced
+  the fixes before Phase A: stale facts, contradictions, dead links,
+  orphan sections, missing references. Focus on changes since the last
+  audit (C.5 cache, DECISIONS 19-23, the podcast route refactor).

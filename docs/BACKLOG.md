@@ -50,5 +50,25 @@ would enable, so it can be prioritised later without re-reading old chats.
   12 paths.
 
 
-  ## Guest mode without login
-  loaclstorage? obs! iphone limit 50 mb.  
+## Guest mode
+
+Two tiers. Not scheduled; after Phase D at the earliest.
+
+- Tier A — curated demo. Five to ten podcasts bundled as static JSON
+  in `public/demo-podcasts.json`. Full browse and playback without
+  signing in. Zero backend, zero Supabase.
+- Tier B — paste-your-own-feed. The browser fetches and parses the
+  RSS. Works only where the feed host sends CORS headers (Acast,
+  Megaphone, Buzzsprout, Anchor do; Apple does not). Fall back to
+  "Sign in to try this feed" when CORS blocks.
+
+Both require a `local-source.ts` implementation of `PodcastSource`.
+The interface exists in `frontend/lib/podcast-source.ts` so neither
+tier requires rewriting consumers.
+
+## Library
+
+- **Differentiate / from /podcasts.** Today both render the same
+  subscription list. When playback exists, / should surface "Continue
+  listening" first, with the full library reachable via /podcasts.
+  Requires Phase E (playback state). See DECISIONS entry 21.
