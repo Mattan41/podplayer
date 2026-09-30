@@ -91,3 +91,27 @@ body {
   color: var(--theme-fg);
   font-family: var(--font-sans, Arial, Helvetica, sans-serif);
 }
+
+/*
+ * Cold-start indicator.
+ *
+ * The hatman hovers diagonally over its mat while the backend wakes. The
+ * keyframes move the whole figure, so the component carries no motion logic of
+ * its own. Reduced-motion users get a static figure: the notice still appears
+ * and disappears on the same schedule, it simply does not move.
+ */
+@keyframes hatman-hover {
+  0%   { transform: translate(0, 0); }
+  25%  { transform: translate(6px, -4px); }
+  50%  { transform: translate(0, -6px); }
+  75%  { transform: translate(-6px, -4px); }
+  100% { transform: translate(0, 0); }
+}
+
+.hatman-hover {
+  animation: hatman-hover 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hatman-hover { animation: none; }
+}

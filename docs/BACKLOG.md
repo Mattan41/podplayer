@@ -37,3 +37,18 @@ would enable, so it can be prioritised later without re-reading old chats.
 
 - **Migrate `SPRING_DATASOURCE_PASSWORD` to Secret Manager.**
   Already in Step 5 of the roadmap.
+
+  ## Performance
+
+- **Lazy-load the hatman figure.** The inlined SVG is 80 KB
+  (frontend/components/hatman-waking.tsx) and ends up in the shared
+  layout chunk, so every page loads it even when the notice never
+  appears. Wrap the import in next/dynamic with ssr:false so it lands
+  in a separate chunk that loads only after the 2-second threshold.
+  Reconsider the figure's complexity at the same time — the icon is a
+  bitmap trace, not a hand-drawn vector, and 40×40 does not need
+  12 paths.
+
+
+  ## Guest mode without login
+  loaclstorage? obs! iphone limit 50 mb.  

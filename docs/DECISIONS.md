@@ -663,32 +663,58 @@ resolved.
 
 ## 19. Podcast detail is a static route with a query parameter
 
-**Context.** Entry 18 measured that the project's `public/404.html` never
-ships: Next writes its own `out/404.html` from the `_not-found` route after
-copying `public/`, so the `sessionStorage` fallback and its restore effect in
-`app/page.tsx` were dead code in the deployed artifact. The dynamic route
-`/podcasts/[id]` was the reason all of it existed, and it had a second
-problem independent of the fallback: `output: 'export'` writes one file per
-route, so the build could only emit a single placeholder (`/podcasts/0.html`).
-Real ids are assigned by the database on first subscription and cannot be
-enumerated at build time, so GitHub Pages had no file to serve for
-`/podcasts/42` no matter which `404.html` won.
+**Context.** Phase C first implemented the podcast detail view as
+`/podcasts/[id]`, using Next.js's dynamic segment with
+`generateStaticParams`. Under `output: 'export'`, an empty
+`generateStaticParams` is rejected and the only alternative is a
+placeholder id, which produces a single static file for an id that can
+never exist. A hard reload on `/podcasts/1` therefore returns a 404 from
+GitHub Pages, and the earlier `public/404.html` fallback (entry 18)
+created an infinite redirect loop rather than fixing it.
 
-**Decision.** Replace the dynamic segment with one static route that carries
-the id as a query parameter: `/podcasts/view?id=42`. The route shell
-(`app/podcasts/view/page.tsx`) has no `generateStaticParams` and wraps the
-client `EpisodesView` in a `Suspense` boundary, because `useSearchParams`
-must be readable while the shell is prerendered. `EpisodesView` reads the id
-from `useSearchParams().get("id")`; a missing or non-positive-integer id
-renders "Podcast not found" with a link back to `/podcasts`. Every link to a
-podcast now points at `/podcasts/view?id={id}`. `public/404.html` and the
-`sessionStorage` restore effect are deleted, since the route is static and
-no fallback is needed.
+**Decision.** The route is now `/podcasts/view?id={id}`, a static route
+that reads the id from `useSearchParams()` inside a `Suspense` boundary.
+`generateStaticParams` is gone. `public/404.html` is deleted, and the
+`sessionStorage` restore effect in `app/page.tsx` is removed.
 
-**Consequence.** This supersedes entry 18. The export contains exactly one
-podcast-detail file (`/podcasts/view.html`) that serves every id, so a hard
-reload works without any host-side rewrite or fallback. The cost is the
-query-string shape in the address bar, and that a link is only shareable as
-`/podcasts/view?id=42` rather than as a path. Entry 18's unresolved question
-— which `404.html` wins on a deep link — no longer arises, because there is
-no file-per-id to miss.
+**Consequence.** Every podcast URL works on GitHub Pages without a
+fallback: the file `out/podcasts/view.html` exists, and the query string
+is preserved across hard reloads, bookmarks and shares. The cost is a
+slightly longer URL (`/podcasts/view?id=1` instead of `/podcasts/1`).
+Given the platform constraint, that is preferable to a route that only
+works through client-side navigation.
+
+**Supersedes entry 18.** Entry 18 described the 404-fallback mechanism
+that this entry removes. It is left in place per the append-only rule;
+its measurements remain accurate, its conclusion does not apply.
+
+## 20. `/health` is public and does not touch the database
+
+**Context.** Cloud Run runs with `--min-instances=0`, so the first
+backend call after idle can take 20+ seconds while the container and the
+JVM cold-start. The frontend needs a way to wake the container without
+waiting for the user to trigger a real request.
+
+**Decision.** Add a `HealthController` at the root package serving
+`GET /health`, outside `/api/**`. It has no dependencies, performs no
+database access, and returns `Map.of("status", "ok")`. It is public:
+`SecurityConfig` already permits any path not under `/api/**`.
+
+**Alternatives considered.**
+
+| Option | Why not |
+| --- | --- |
+| Spring Boot Actuator at `/actuator/health` | Adds a dependency, exposes more than the endpoint needs, and pulls in DB health checks that would hit Supabase on every call. |
+| `/api/health` with explicit `permitAll()` | Works, but adds configuration to `SecurityConfig` for no gain, and puts a liveness probe inside the API contract surface. |
+| Private, called only by Cloud Run's own probe | Solves a different problem. The frontend cannot warm the container through a private endpoint. |
+
+**Consequence.** Anyone who knows the URL can confirm the backend is
+running. That information is already public: an anonymous request to
+`/api/podcasts` returns `401` with
+`WWW-Authenticate: Bearer resource_metadata="…"`, which reveals the
+service exists and its OAuth metadata URL. Adding `/health` adds no new
+information.
+
+The endpoint responds in milliseconds when the container is warm, and
+its only job when cold is to start the container. It is not a readiness
+or liveness probe and does not report dependencies.
