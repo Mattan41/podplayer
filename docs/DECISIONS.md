@@ -717,4 +717,32 @@ information.
 
 The endpoint responds in milliseconds when the container is warm, and
 its only job when cold is to start the container. It is not a readiness
+
+## 21. `/` is the library; the counter is retired as a landing page
+
+**Context.** Step 1 shipped a counter to prove the frontend, backend and
+Supabase were wired together. That job is done: `/health` (entry 20) and the
+podcast API both exercise the same path end to end. The counter was still the
+landing page, with a hardcoded link to `/podcasts`, so a visitor landed on a
+diagnostic instead of the product.
+
+**Decision.** The landing page is the subscription list. `/` and `/podcasts`
+render the same `frontend/components/subscription-list.tsx`; the component is
+not duplicated. The header shows "Home" before "Podcasts" for authenticated
+users. A missing Supabase session is treated as a state, not an error: the list
+renders "Sign in to see your podcasts" and points at the header's sign-in
+button instead of a failure sentence.
+
+**Consequence.** The frontend no longer calls `/api/counter`, but the backend
+`CounterController`, the `Counter` entity and the `counter` table stay in
+place. Removing them is a separate change: it needs a Flyway migration to drop
+the table, and doing it here would mix a product change with a schema change.
+With the frontend side gone, that follow-up has no UI to coordinate.
+
+**Alternatives considered.** Keep `/` as the counter until the player exists,
+rejected because the counter is a health check and `/health` now does that job
+without a page. Redirect `/` to `/podcasts`, rejected because GitHub Pages
+serves static files with no rewrite rules and a redirect adds a round trip for
+the common case.
+
 or liveness probe and does not report dependencies.

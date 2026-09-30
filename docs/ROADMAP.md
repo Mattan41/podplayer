@@ -65,7 +65,9 @@ file's acceptance criteria need a signed-in session on the deployed site —
 subscribing to a real feed, a hard reload on the detail route, and the 403
 view — so the phase is not marked done until those are observed. See
 `DECISIONS.md` entries 18 and 19 for why the dynamic route and its SPA
-fallback were replaced.
+fallback were replaced. C.5 followed in the same step: the landing page
+(`/`) is now the subscription list, and the frontend counter page is
+retired. See `DECISIONS.md` entry 21.
 
 ### Phase D — Playback engine
 The `PlayerProvider`, the `<audio>` element, the mini and full player
@@ -104,9 +106,10 @@ reason, not as a dedicated phase.
   authorization at class level. `AdminUserController` gets it the next
   time it is modified. `SecurityConfig` keeps only the coarse rules
   (`/api/auth/**` permitAll, everything else authenticated).
-- **Remove `CounterController`** once the player is live.
-- **Remove the `counter` table** via a Flyway migration once the counter
-  is gone.
+- **Remove the backend counter.** The frontend counter page is gone as of
+  C.5 (`DECISIONS.md` entry 21); `CounterController`, the `Counter`
+  entity and the `counter` table remain and are removed together — the
+  table last, via a Flyway migration — in a change of their own.
 - **`docs/api/`** exists as of Phase B, starting with `podcasts.md`. Add
   one file per feature as endpoints arrive, matching the level of detail
   in `DECISIONS.md`.

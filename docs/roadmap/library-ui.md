@@ -8,17 +8,19 @@ Frontend: subscription list, episode list, add-podcast form. No playback.
   endpoints in `docs/api/podcasts.md`. Both TypeScript types and the
   wrapper functions live here; split later if the file grows past ~200
   lines.
-- `frontend/app/podcasts/page.tsx` — the subscription list and the
-  add-podcast form.
+- `frontend/components/subscription-list.tsx` — the subscription list and
+  the add-podcast form, shared by both routes below; there is one copy.
+  A missing Supabase session renders a neutral "Sign in to see your
+  podcasts" view instead of an error.
+- `frontend/app/page.tsx` — the landing page: renders the subscription
+  list. Until C.5 this route was the counter; see `DECISIONS.md` entry 21.
+- `frontend/app/podcasts/page.tsx` — the same list at its own route, so
+  existing links and bookmarks keep working.
 - `frontend/app/podcasts/view/page.tsx` — the episode list for one podcast,
   with a refresh button. The podcast id is a query parameter
   (`/podcasts/view?id=42`), not a path segment, so the route stays static.
-- `frontend/app/header.tsx` — a link to /podcasts, visible only when the
-  user is authenticated.
-- `frontend/app/page.tsx` — the counter remains the landing page for now.
-  A link to /podcasts is added to the counter card so the counter stays
-  reachable as a health check. When the counter is removed later, this
-  link is replaced by the podcast list itself.
+- `frontend/app/header.tsx` — "Home" and "Podcasts" links, visible only
+  when the user is authenticated.
 
 ## Acceptance criteria
 
@@ -41,7 +43,8 @@ Frontend: subscription list, episode list, add-podcast form. No playback.
 - Playback.
 - RSS discovery (searching by name).
 - OPML import/export.
-- Any change to the counter feature.
+- The backend counter feature. C.5 removed only its frontend page
+  (`DECISIONS.md` entry 21); the controller, entity and table remain.
 
 ## Notes
 
