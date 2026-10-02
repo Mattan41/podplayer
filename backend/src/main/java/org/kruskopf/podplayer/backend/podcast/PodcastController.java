@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -63,12 +64,19 @@ public class PodcastController {
 
     /**
      * @param id   the podcast whose episodes are wanted
+     * @param page the zero-based page to read; defaults to the first page
+     * @param size the page size; defaults to
+     *             {@value PodcastService#DEFAULT_EPISODE_PAGE_SIZE} and is capped
+     *             at {@value PodcastService#MAX_EPISODE_PAGE_SIZE}
      * @param auth the authenticated caller
-     * @return the podcast's episodes, newest first
+     * @return one page of the podcast's episodes, newest first, with the total
      */
     @GetMapping("/{id}/episodes")
-    public List<EpisodeDto> listEpisodes(@PathVariable long id, Authentication auth) {
-        return podcastService.listEpisodes(id, auth.getName());
+    public EpisodePageDto listEpisodes(@PathVariable long id,
+                                       @RequestParam(defaultValue = "0") int page,
+                                       @RequestParam(defaultValue = "50") int size,
+                                       Authentication auth) {
+        return podcastService.listEpisodes(id, auth.getName(), page, size);
     }
 
     /**

@@ -30,8 +30,10 @@ episode view (`DECISIONS.md` entries 21 and 22). Phase D is next.
 - `frontend/app/podcasts/page.tsx` — the same list at its own route, so
   existing links and bookmarks keep working.
 - `frontend/app/podcasts/view/page.tsx` — the episode list for one podcast,
-  with a refresh button. The podcast id is a query parameter
-  (`/podcasts/view?id=42`), not a path segment, so the route stays static.
+  with a refresh button and a Load more control. The list is paged (50 at a
+  time) and reads `EpisodePageDto`; see `DECISIONS.md` entry 25. The podcast
+  id is a query parameter (`/podcasts/view?id=42`), not a path segment, so the
+  route stays static.
 - `frontend/app/header.tsx` — "Home" and "Podcasts" links, visible only
   when the user is authenticated.
 
@@ -70,10 +72,11 @@ episode view (`DECISIONS.md` entries 21 and 22). Phase D is next.
   route is therefore one static file — `/podcasts/view.html` — that reads
   the id from the query string (`/podcasts/view?id=42`). No SPA fallback is
   needed. See `DECISIONS.md` entries 18 and 19.
-- **Data shapes.** The four DTO types in `frontend/lib/api/podcast.ts`
-  mirror `PodcastSummaryDto`, `PodcastDto`, `EpisodeDto` and
-  `SubscribeResult` from `docs/api/podcasts.md`. Update both files
-  together when either changes; this is ARCHITECTURE §5 rule 8.
+- **Data shapes.** The DTO types in `frontend/lib/api/podcast.ts`
+  mirror `PodcastSummaryDto`, `PodcastDto`, `EpisodeDto`,
+  `EpisodePageDto`, `SubscribeResult` and `RefreshResult` from
+  `docs/api/podcasts.md`. Update both files together when either
+  changes; this is ARCHITECTURE §5 rule 8.
 - **Design tokens.** Every new component uses `BaseButton`, `BaseCard`,
   `BaseField`, `BaseInput` and the semantic tokens. No raw `<button>`,
   `<input>` or `<select>` outside `frontend/components/base/`; the lint

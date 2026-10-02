@@ -902,3 +902,55 @@ remain accurate, its layout decision does not apply.
 | Frosted / translucent panel | Unmeasurable contrast, against §6, and no separation benefit without a shadow. See above. |
 | Full-screen overlay menu | Four routes do not justify covering the page, and it would need scroll locking and a focus trap — the point at which Radix becomes the right answer (entry 1). |
 | Radix `DropdownMenu` | Still deferred. The panel is anchored to a static parent and holds three links, so there is no collision or roving-focus problem for a library to solve. |
+
+## 25. Episodes are paged with `page`/`size` and an `EpisodePageDto` wrapper
+
+**Context.** `GET /api/podcasts/{id}/episodes` returned every stored episode as
+one array. Older podcasts carry hundreds or thousands of episodes, so the first
+render of the episode view transferred and parsed far more than it showed, and
+the frontend held the whole list in state and in the localStorage cache.
+
+**Decision.** Page the endpoint. `page` is zero-based, `size` defaults to 50 and
+is clamped to 100, and the response is a wrapper record rather than a bare array:
+
+```java
+public record EpisodePageDto(
+        List<EpisodeDto> episodes, int page, int size, long total, boolean hasMore) { }
+```
+
+`EpisodeRepository.findPageByPodcastId` returns Spring Data's `Page<Episode>`,
+and the service maps it onto the record. The frontend keeps the loaded episodes
+in state, shows `n of total` in the list header, and offers a "Load more" button
+while `hasMore` is true. Only the first page is written to the localStorage
+cache; later pages are appended in memory.
+
+**Why a wrapper record, not `Page` directly.** Serialising Spring Data's `Page`
+would put framework detail (`pageable`, `sort`, `numberOfElements`) into the
+contract, and its JSON shape is not guaranteed across upgrades. Every other
+response in this API is a plain DTO record (ARCHITECTURE §5 rule 8, "Contract
+First"), so the page is one too, and nothing from Spring Data crosses the HTTP
+boundary.
+
+**Why not a response header (`X-Total-Count`) with a bare array.** The frontend
+goes through `fetch` + JSON and would have to read the count separately from the
+body it already parses, and a header is easy to drop at a proxy. A field in the
+body keeps the whole answer in one place and is testable from the DTO.
+
+**Why `page`/`size` and not `offset`/`limit`.** It maps 1:1 to Spring Data's
+`Pageable`/`Page`, so `total` and `hasMore` come for free, with no arithmetic
+and no custom `Pageable`. Spring Data JPA has no offset-based `Pageable`; an
+offset API would need `offset / size` (wrong for non-multiples) or a manual
+`EntityManager.setFirstResult`.
+
+**Known caveat — page drift.** Page-number paging can duplicate or skip a row if
+new episodes are inserted at the top between two page reads, because the offset
+of every later page shifts by the number inserted. Accepted for now: episode
+lists are read in one sitting, the refresh action resets to page 0, and the
+alternative (keyset paging on `(published_at, id)`) is more machinery than the
+feature needs. Revisit if the drift is ever observed.
+
+**Consequence.** The endpoint's response shape changed from an array to an
+object. `frontend/lib/api/podcast.ts` `listEpisodes` takes `page`/`size` and
+returns `EpisodePageDto`, and the `PodcastSource` interface follows; the episode
+view accumulates pages and gains a Load more control. See `docs/api/podcasts.md`
+and `docs/roadmap/library-ui.md`.

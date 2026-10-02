@@ -3,6 +3,8 @@ package org.kruskopf.podplayer.backend.podcast;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -19,6 +21,23 @@ public interface EpisodeRepository extends JpaRepository<Episode, Long> {
     @Query("SELECT e FROM Episode e WHERE e.podcastId = :podcastId " +
             "ORDER BY e.publishedAt DESC NULLS LAST")
     List<Episode> findByPodcastIdOrderByPublishedAtDesc(@Param("podcastId") Long podcastId);
+
+    /**
+     * One page of a podcast's episodes, newest first.
+     *
+     * <p>The ordering lives in the query, not in the {@link Pageable}, because
+     * {@code NULLS LAST} is not expressible as a Spring Data {@code Sort}. The
+     * matching {@code countQuery} is given explicitly so the count does not have
+     * to be derived from a query that ends in an {@code ORDER BY}.</p>
+     *
+     * @param podcastId the owning podcast
+     * @param pageable  the page to read; its sort is ignored
+     * @return the requested page of episodes, with the total count
+     */
+    @Query(value = "SELECT e FROM Episode e WHERE e.podcastId = :podcastId " +
+            "ORDER BY e.publishedAt DESC NULLS LAST",
+            countQuery = "SELECT count(e) FROM Episode e WHERE e.podcastId = :podcastId")
+    Page<Episode> findPageByPodcastId(@Param("podcastId") Long podcastId, Pageable pageable);
 
     /**
      * Looks an episode up by the identifier the feed assigns it. A

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 import type {
-  EpisodeDto,
+  EpisodePageDto,
   PodcastSummaryDto,
   RefreshResult,
   SubscribeResult,
@@ -25,7 +25,7 @@ import { remotePodcastSource } from "@/lib/podcast-source-remote";
 export interface PodcastSource {
   listSubscriptions(): Promise<PodcastSummaryDto[]>;
   subscribe(feedUrl: string): Promise<SubscribeResult>;
-  listEpisodes(podcastId: number): Promise<EpisodeDto[]>;
+  listEpisodes(podcastId: number, page?: number, size?: number): Promise<EpisodePageDto>;
   refreshPodcast(podcastId: number): Promise<RefreshResult>;
 }
 

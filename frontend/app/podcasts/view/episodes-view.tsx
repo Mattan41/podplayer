@@ -10,9 +10,13 @@ import { BaseButton, BaseCard } from "@/components/base";
 
 const SIGN_IN_ERROR = "Sign in to see this podcast.";
 const LOAD_ERROR = "Could not load the episodes.";
+const LOAD_MORE_ERROR = "Could not load more episodes.";
 const REFRESH_ERROR = "Could not refresh the feed.";
 const NOT_SUBSCRIBED_ERROR = "You are not subscribed to this podcast";
 const NOT_FOUND_ERROR = "Podcast not found";
+
+/** Matches the backend's default page size, so the "load more" step is one page. */
+const EPISODE_PAGE_SIZE = 50;
 
 /** apiFetch throws this exact message when there is no Supabase session. */
 function isNotAuthenticated(error: unknown): boolean {
@@ -96,7 +100,11 @@ export default function EpisodesView() {
   const source = usePodcastSource();
 
   const [episodes, setEpisodes] = useState<EpisodeDto[]>([]);
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [blocked, setBlocked] = useState<"not-subscribed" | "not-found" | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -114,17 +122,25 @@ export default function EpisodesView() {
     let isCancelled = false;
 
     const key = episodesCacheKey(podcastId);
-    const { cached, fresh } = withCache(key, () => source.listEpisodes(podcastId));
+    /*
+     * Only the first page is cached. `loadMore` appends later pages in memory.
+     */
+    const { cached, fresh } = withCache(key, () =>
+      source.listEpisodes(podcastId, 0, EPISODE_PAGE_SIZE),
+    );
 
     const load = async () => {
       /*
-       * The cached list paints before the network answers, when there is one.
-       * Kept in the async load rather than directly in the effect body:
+       * The cached first page paints before the network answers, when there is
+       * one. Kept in the async load rather than directly in the effect body:
        * react-hooks/set-state-in-effect rejects the direct form, and this is
        * where the effect already performs its state updates.
        */
       if (cached !== null) {
-        setEpisodes(cached);
+        setEpisodes(cached.episodes);
+        setPage(cached.page);
+        setTotal(cached.total);
+        setHasMore(cached.hasMore);
         setBlocked(null);
         setIsLoading(false);
       }
@@ -132,7 +148,10 @@ export default function EpisodesView() {
       try {
         const loaded = await fresh;
         if (!isCancelled) {
-          setEpisodes(loaded);
+          setEpisodes(loaded.episodes);
+          setPage(loaded.page);
+          setTotal(loaded.total);
+          setHasMore(loaded.hasMore);
           setBlocked(null);
           setError(null);
           setIsShowingCached(false);
@@ -178,18 +197,39 @@ export default function EpisodesView() {
       setRefreshMessage(describeAddedEpisodes(result.addedEpisodes));
       /*
        * The refresh endpoint answers with a count, not the episodes. Read the
-       * list once more and overwrite the cache with it, so the next mount of
-       * this page is instant instead of stale.
+       * first page once more and overwrite the cache with it, so the next mount
+       * of this page is instant instead of stale. This also resets the list to
+       * page 0: the feed may have new episodes at the top, and a half-scrolled
+       * page mixing two reads would be worse than starting over.
        */
-      const reloaded = await source.listEpisodes(podcastId);
+      const reloaded = await source.listEpisodes(podcastId, 0, EPISODE_PAGE_SIZE);
       setCached(episodesCacheKey(podcastId), reloaded);
-      setEpisodes(reloaded);
+      setEpisodes(reloaded.episodes);
+      setPage(reloaded.page);
+      setTotal(reloaded.total);
+      setHasMore(reloaded.hasMore);
       setBlocked(null);
       setIsShowingCached(false);
     } catch (refreshError) {
       setError(describeError(refreshError, REFRESH_ERROR));
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const loadMore = async () => {
+    setIsLoadingMore(true);
+    setError(null);
+    try {
+      const next = await source.listEpisodes(podcastId, page + 1, EPISODE_PAGE_SIZE);
+      setEpisodes((previous) => [...previous, ...next.episodes]);
+      setPage(next.page);
+      setTotal(next.total);
+      setHasMore(next.hasMore);
+    } catch (loadMoreError) {
+      setError(describeError(loadMoreError, LOAD_MORE_ERROR));
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
@@ -248,7 +288,13 @@ export default function EpisodesView() {
       <BaseCard>
         <div className="flex items-center justify-between border-b border-fg px-6 py-3">
           <h2 className="font-mono text-lg">Episodes</h2>
-          {isLoading ? <span className="text-xs text-muted">Loading…</span> : null}
+          {isLoading ? (
+            <span className="text-xs text-muted">Loading…</span>
+          ) : (
+            <span className="text-xs text-muted">
+              {total === 0 ? "None" : `${episodes.length} of ${total}`}
+            </span>
+          )}
         </div>
 
         {episodes.length === 0 && !isLoading ? (
@@ -269,6 +315,19 @@ export default function EpisodesView() {
             })}
           </ul>
         )}
+
+        {hasMore ? (
+          <div className="border-t border-fg px-6 py-4">
+            <BaseButton
+              variant="outline"
+              size="sm"
+              onClick={() => void loadMore()}
+              disabled={isLoadingMore}
+            >
+              {isLoadingMore ? "Loading…" : "Load more"}
+            </BaseButton>
+          </div>
+        ) : null}
       </BaseCard>
 
       {isShowingCached ? <p className="text-sm text-muted">Showing cached data</p> : null}

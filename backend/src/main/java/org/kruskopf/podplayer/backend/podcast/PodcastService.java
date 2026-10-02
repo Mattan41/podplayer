@@ -16,6 +16,8 @@ import org.kruskopf.podplayer.backend.podcast.feed.FeedFetchException;
 import org.kruskopf.podplayer.backend.podcast.feed.ParsedEpisode;
 import org.kruskopf.podplayer.backend.podcast.feed.ParsedFeed;
 import org.kruskopf.podplayer.backend.podcast.feed.RssFeedParser;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,8 +40,10 @@ import org.springframework.web.server.ResponseStatusException;
  *       result, not a failure.</li>
  *   <li>{@link #listSubscriptions(String)} returns {@link PodcastSummaryDto}s,
  *       one per follow, ordered by title.</li>
- *   <li>{@link #listEpisodes(long, String)} returns {@link EpisodeDto}s, newest
- *       first, and refuses to list a podcast the caller does not follow.</li>
+ *   <li>{@link #listEpisodes(long, String, int, int)} returns an
+ *       {@link EpisodePageDto}: one page of {@link EpisodeDto}s, newest first,
+ *       plus the total, and refuses to list a podcast the caller does not
+ *       follow.</li>
  * </ul>
  *
  * <p>Three properties of the implementation are deliberate:</p>
@@ -72,6 +76,12 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @Service
 public class PodcastService {
+
+    /** Page size used when a caller does not ask for one. */
+    public static final int DEFAULT_EPISODE_PAGE_SIZE = 50;
+
+    /** Largest page a caller may ask for, so one request cannot read the table. */
+    public static final int MAX_EPISODE_PAGE_SIZE = 100;
 
     private final PodcastRepository podcastRepository;
     private final EpisodeRepository episodeRepository;
@@ -198,24 +208,37 @@ public class PodcastService {
     }
 
     /**
-     * Lists a podcast's episodes, newest first.
+     * Lists one page of a podcast's episodes, newest first.
      *
      * <p>A caller who does not follow the podcast gets {@code 403} rather than
-     * an empty list, so the endpoint cannot be used to enumerate the episode
+     * an empty page, so the endpoint cannot be used to enumerate the episode
      * catalogue of podcasts the user has not subscribed to.</p>
+     *
+     * <p>The page is zero-based. A page past the end is not an error: it returns
+     * an empty {@link EpisodePageDto} whose {@code total} still tells the caller
+     * how many episodes exist, which is what a "load more" client needs.</p>
      *
      * @param podcastId the podcast whose episodes are wanted
      * @param userEmail the caller's e-mail address, in any casing
-     * @return the podcast's episodes, newest first; empty for a podcast the
-     *         caller follows but which has no episodes yet
+     * @param page      the zero-based page to read; a negative value is rejected
+     * @param size      the page size; clamped to
+     *                  {@value #MAX_EPISODE_PAGE_SIZE}, and a non-positive value
+     *                  falls back to {@value #DEFAULT_EPISODE_PAGE_SIZE}
+     * @return one page of the podcast's episodes, newest first; empty for a
+     *         podcast the caller follows but which has no episodes yet
      * @throws ResponseStatusException {@code 404} when no podcast has that id,
-     *                                 {@code 403} when the caller does not
-     *                                 follow it, {@code 401} when the caller has
-     *                                 no usable e-mail address
+     *                                 {@code 400} when {@code page} is negative,
+     *                                 {@code 403} when the caller does not follow
+     *                                 it, {@code 401} when the caller has no
+     *                                 usable e-mail address
      */
     @Transactional(readOnly = true)
-    public List<EpisodeDto> listEpisodes(long podcastId, String userEmail) {
+    public EpisodePageDto listEpisodes(long podcastId, String userEmail, int page, int size) {
         String user = normalizeUser(userEmail);
+        if (page < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "page must not be negative");
+        }
         if (!podcastRepository.existsById(podcastId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No podcast with id " + podcastId);
         }
@@ -223,10 +246,16 @@ public class PodcastService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "You are not subscribed to podcast " + podcastId);
         }
-        return episodeRepository.findByPodcastIdOrderByPublishedAtDesc(podcastId)
-                .stream()
-                .map(EpisodeDto::from)
-                .toList();
+        Page<Episode> result = episodeRepository.findPageByPodcastId(
+                podcastId, PageRequest.of(page, clampPageSize(size)));
+        return EpisodePageDto.from(result);
+    }
+
+    private static int clampPageSize(int size) {
+        if (size <= 0) {
+            return DEFAULT_EPISODE_PAGE_SIZE;
+        }
+        return Math.min(size, MAX_EPISODE_PAGE_SIZE);
     }
 
     private static String normalizeUser(String userEmail) {

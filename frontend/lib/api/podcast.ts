@@ -45,6 +45,21 @@ export type EpisodeDto = {
   imageUrl: string | null;
 };
 
+/*
+ * One page of an episode list. Mirrors the backend's `EpisodePageDto`, which
+ * wraps the episodes rather than returning a bare array so the client gets the
+ * total and whether another page exists in the same response. `page` is
+ * zero-based and `size` is the size the backend actually used. See
+ * docs/api/podcasts.md.
+ */
+export type EpisodePageDto = {
+  episodes: EpisodeDto[];
+  page: number;
+  size: number;
+  total: number;
+  hasMore: boolean;
+};
+
 export type SubscribeResult = {
   podcast: PodcastDto;
   alreadySubscribed: boolean;
@@ -136,17 +151,25 @@ export async function subscribe(feedUrl: string): Promise<SubscribeResult> {
 
 /**
  * @param podcastId the podcast whose episodes are wanted
- * @returns the podcast's episodes, newest first
+ * @param page the zero-based page to read, defaulting to the first page
+ * @param size the page size, defaulting to the backend's 50
+ * @returns one page of the podcast's episodes, newest first, with the total
  * @throws PodcastApiError when the backend refuses the request; `403` when the
  *         user does not follow the podcast, `404` when it does not exist
  * @throws Error "Not authenticated" when there is no session
  */
-export async function listEpisodes(podcastId: number): Promise<EpisodeDto[]> {
-  const response = await apiFetch(`/api/podcasts/${podcastId}/episodes`);
+export async function listEpisodes(
+  podcastId: number,
+  page = 0,
+  size = 50,
+): Promise<EpisodePageDto> {
+  const response = await apiFetch(
+    `/api/podcasts/${podcastId}/episodes?page=${page}&size=${size}`,
+  );
   if (!response.ok) {
     throw new PodcastApiError(response.status, await messageFrom(response));
   }
-  return (await response.json()) as EpisodeDto[];
+  return (await response.json()) as EpisodePageDto;
 }
 
 /**

@@ -137,7 +137,8 @@ Lists the podcasts the caller follows.
 
 ## GET /api/podcasts/{id}/episodes — list episodes
 
-Lists one podcast's episodes, newest first, for a caller who follows it.
+Lists one page of a podcast's episodes, newest first, for a caller who follows
+it.
 
 **Path parameters**
 
@@ -145,33 +146,54 @@ Lists one podcast's episodes, newest first, for a caller who follows it.
 | --- | --- | --- |
 | `id` | integer | The `podcastId` from the subscription list |
 
+**Query parameters**
+
+| Name | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `page` | integer | `0` | Zero-based page number. A negative value is a `400`; a page past the end returns an empty `episodes` array, not an error |
+| `size` | integer | `50` | Episodes per page. A non-positive value falls back to `50`; a value above `100` is clamped to `100` |
+
 **Responses**
 
 | Status | When | Body |
 | --- | --- | --- |
-| `200` | The caller follows the podcast | Array of `EpisodeDto`, empty for a podcast with no stored episodes |
-| `400` | `id` is not an integer | problem body |
+| `200` | The caller follows the podcast | `EpisodePageDto`; `episodes` is empty for a podcast with no stored episodes, and for a page past the end |
+| `400` | `id` is not an integer, or `page` is negative | problem body |
 | `401` | The session has no usable e-mail claim | problem body |
 | `403` | The podcast exists but the caller does not follow it | problem body |
 | `404` | No podcast has that id | problem body |
 
 ```json
-[
-  {
-    "id": 7,
-    "guid": "episode-1",
-    "title": "Episode One",
-    "description": "The first episode.",
-    "audioUrl": "https://example.org/audio/episode-1.mp3",
-    "publishedAt": "2026-01-05T09:00:00Z",
-    "durationSeconds": 3723,
-    "imageUrl": "https://example.org/episode-1-artwork.png"
-  }
-]
+{
+  "episodes": [
+    {
+      "id": 7,
+      "guid": "episode-1",
+      "title": "Episode One",
+      "description": "The first episode.",
+      "audioUrl": "https://example.org/audio/episode-1.mp3",
+      "publishedAt": "2026-01-05T09:00:00Z",
+      "durationSeconds": 3723,
+      "imageUrl": "https://example.org/episode-1-artwork.png"
+    }
+  ],
+  "page": 0,
+  "size": 50,
+  "total": 340,
+  "hasMore": true
+}
 ```
 
 **Notes**
 
+- The response is a paged envelope, not a bare array. `total` counts every stored
+  episode of the podcast, not just this page, and `hasMore` is
+  `(page + 1) * size < total`, so a "load more" client does not have to infer
+  the end from an empty page. A wrapper record is used instead of Spring Data's
+  `Page` so no framework shape (`pageable`, `sort`) reaches the client; see
+  `DECISIONS.md` entry 25.
+- `page` and `size` are inputs and are echoed back with the size the backend
+  actually used, so a clamped request is visible in the response.
 - Ordered by `published_at` descending. PostgreSQL sorts nulls first in `DESC`
   order, so an episode whose feed omitted a publish date appears at the top of
   the list rather than the bottom. Worth revisiting if it looks wrong in the UI.

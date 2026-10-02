@@ -18,7 +18,13 @@
 export const SUBSCRIPTIONS_CACHE_KEY = "podplayer.cache.subscriptions";
 export const POSITIONS_CACHE_KEY = "podplayer.cache.positions";
 
-/** @param podcastId the podcast whose episode list is cached */
+/**
+ * @param podcastId the podcast whose episode list is cached
+ * @returns the key holding that podcast's first episode page. Only the first
+ *          page is cached: later pages are appended in memory by the view, so
+ *          caching them would either need per-page keys or a growing value for
+ *          no user-visible gain. Revisit if revisiting a deep scroll matters.
+ */
 export function episodesCacheKey(podcastId: number): string {
   return `podplayer.cache.episodes.${podcastId}`;
 }
