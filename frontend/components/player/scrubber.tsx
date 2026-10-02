@@ -43,6 +43,11 @@ export type ScrubberProps = {
  *
  * Until metadata arrives the duration is unknown, so the slider is disabled and
  * the track is given a placeholder range of `1`.
+ *
+ * Each readout is `w-10` (40px). Measured in Geist Mono at `text-xs`, the
+ * widest string under an hour (`59:59`) is 38.34px, so five characters fit;
+ * `h:mm:ss` past an hour (7 characters, 50.95px) overflows, as it already did
+ * at the previous `w-12` (48px).
  */
 export default function Scrubber({ currentTime, duration, onSeek }: ScrubberProps) {
   const [preview, setPreview] = useState<number | null>(null);
@@ -54,7 +59,7 @@ export default function Scrubber({ currentTime, duration, onSeek }: ScrubberProp
 
   return (
     <div className="flex items-center gap-3">
-      <span className="w-12 shrink-0 text-right font-mono text-xs text-muted tabular-nums">
+      <span className="w-10 shrink-0 text-right font-mono text-xs text-muted tabular-nums">
         {formatTime(displayed)}
       </span>
       <BaseSlider
@@ -71,7 +76,7 @@ export default function Scrubber({ currentTime, duration, onSeek }: ScrubberProp
           onSeek(value);
         }}
       />
-      <span className="w-12 shrink-0 font-mono text-xs text-muted tabular-nums">
+      <span className="w-10 shrink-0 font-mono text-xs text-muted tabular-nums">
         {formatTime(hasDuration ? duration : 0)}
       </span>
     </div>

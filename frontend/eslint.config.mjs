@@ -92,6 +92,24 @@ const eslintConfig = defineConfig([
   },
   {
     /*
+     * Every <img> in this app is third-party feed artwork: the podcast cover and
+     * the episode artwork come from whichever host publishes the feed.
+     * next/image cannot optimize them under output: 'export' (no image
+     * optimizer is built), and listing every host in next.config.ts would not
+     * help because the hosts are arbitrary.
+     *
+     * The rule is off rather than per-file so the next <img> does not
+     * re-litigate the same decision. A local static image, if one is ever added
+     * to public/, should still use next/image with explicit width and height;
+     * the comment here is not a licence for that.
+     */
+    files: ["**/*.tsx"],
+    rules: {
+      "@next/next/no-img-element": "off",
+    },
+  },
+  {
+    /*
      * The base components are the one place raw elements may appear: they are
      * what the rule above points callers at.
      */

@@ -45,6 +45,13 @@ export default function FullPlayer() {
 
         <div className="min-w-0 flex-1">
           <p className="text-xs tracking-widest text-muted">Now playing</p>
+          {/*
+            Plain text, never HTML: the feed sends markup such as
+            "<p>Tisdag!…", and it is shown verbatim as an escaped text node, so
+            the angle brackets the feed sent stay visible. Stripping tags is an
+            API decision for a later phase; the description is never injected as
+            raw markup here.
+          */}
           {episode.description ? (
             <p className="mt-2 max-h-40 overflow-y-auto text-sm text-muted">
               {episode.description}

@@ -3,10 +3,15 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { PodcastApiError, type EpisodeDto } from "@/lib/api/podcast";
+import { PodcastApiError, type EpisodeDto, type PodcastSummaryDto } from "@/lib/api/podcast";
 import { usePodcastSource } from "@/lib/podcast-source";
 import { usePlayer } from "@/lib/player-context";
-import { episodesCacheKey, setCached, withCache } from "@/lib/podcast-cache";
+import {
+  episodesCacheKey,
+  setCached,
+  SUBSCRIPTIONS_CACHE_KEY,
+  withCache,
+} from "@/lib/podcast-cache";
 import { BaseButton, BaseCard } from "@/components/base";
 
 const SIGN_IN_ERROR = "Sign in to see this podcast.";
@@ -101,6 +106,15 @@ export default function EpisodesView() {
   const source = usePodcastSource();
   const { state, playEpisode } = usePlayer();
 
+  /*
+   * The player surface is a fixed bar at the bottom of the viewport, so when it
+   * is up the page reserves its height and the "Load more" button is never
+   * covered. `pb-24` (96px) is chosen over the bar's measured 81px to leave a
+   * small gap; see the fix report, item 1. The error notice is the same fixed
+   * bar, so it counts too.
+   */
+  const hasPlayerBar = state.episode !== null || state.error !== null;
+
   const [episodes, setEpisodes] = useState<EpisodeDto[]>([]);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
@@ -112,6 +126,7 @@ export default function EpisodesView() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
   const [isShowingCached, setIsShowingCached] = useState(false);
+  const [podcast, setPodcast] = useState<PodcastSummaryDto | null>(null);
 
   useEffect(() => {
     if (!isValidId) {
@@ -180,6 +195,52 @@ export default function EpisodesView() {
         if (!isCancelled) {
           setIsLoading(false);
         }
+      }
+    };
+
+    void load();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [podcastId, isValidId, source]);
+
+  /*
+   * The cover, title and author are properties of the subscription, not of the
+   * episode page: `EpisodePageDto` carries only episodes. They are read from the
+   * subscription list, through the same cache the library writes, so a second
+   * visit in the same session paints the cover from localStorage. A miss (the
+   * user is not subscribed, so `listEpisodes` will answer 403 anyway) or a
+   * failure renders nothing: the cover is decoration, the list is the content.
+   */
+  useEffect(() => {
+    if (!isValidId) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const { cached, fresh } = withCache(SUBSCRIPTIONS_CACHE_KEY, () =>
+      source.listSubscriptions(),
+    );
+    const pick = (list: PodcastSummaryDto[]) =>
+      list.find((item) => item.podcastId === podcastId) ?? null;
+
+    const load = async () => {
+      if (cached !== null) {
+        setPodcast(pick(cached));
+      }
+      try {
+        const list = await fresh;
+        if (!isCancelled) {
+          setPodcast(pick(list));
+        }
+      } catch {
+        /*
+         * Swallowed on purpose. The cover is decoration; the episode list
+         * reports its own failures, and its 403 already drives the "not
+         * subscribed" view. A failed subscription read must not blank the page.
+         */
       }
     };
 
@@ -264,7 +325,33 @@ export default function EpisodesView() {
   }
 
   return (
-    <main className="flex flex-1 flex-col gap-8 p-8">
+    <main className={`flex flex-1 flex-col gap-8 p-8 ${hasPlayerBar ? "pb-24" : ""}`}>
+      {podcast ? (
+        /*
+         * The podcast's own identity, matching the thumbnail the library list
+         * shows per podcast. A plain <img>: the cover lives on whichever host
+         * publishes the feed. The thumbnail is decorative because the title
+         * sits next to it, hence the empty alt.
+         */
+        <BaseCard className="flex items-center gap-4 p-6">
+          {podcast.imageUrl ? (
+            <img
+              src={podcast.imageUrl}
+              alt=""
+              loading="lazy"
+              className="h-16 w-16 shrink-0 rounded-base border border-fg object-cover"
+            />
+          ) : null}
+
+          <div className="min-w-0">
+            <p className="truncate">{podcast.title}</p>
+            {podcast.author ? (
+              <p className="mt-1 truncate text-sm text-muted">{podcast.author}</p>
+            ) : null}
+          </div>
+        </BaseCard>
+      ) : null}
+
       <BaseCard className="p-6">
         <p className="text-xs tracking-widest text-muted">Library</p>
         <h1 className="mt-2 font-mono text-2xl">Episodes</h1>
