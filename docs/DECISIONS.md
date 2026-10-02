@@ -832,3 +832,73 @@ needs it, which is the player scrubber or a dialog, not this.
 | `overflow-x-auto` on the header | Hides the problem behind a scrollbar and reintroduces horizontal scrolling, which `docs/DESIGN_NOTES.md` treats as a measurable defect (`scrollWidth == clientWidth`). |
 | Radix `DropdownMenu` | A dependency and a positioning/portal model for a disclosure that fits in the flow. See entry 1. |
 | Icons for every link instead of text | Four nested meanings to learn, and `docs/STYLEGUIDE.md` §4 keeps the header typographic. The one icon that remains (the menu glyph) is conventional. |
+
+## 24. The mobile menu is an overlay holding only the routes
+
+**Context.** Entry 23 moved the whole authenticated header — e-mail, routes and
+sign-out — into an in-flow disclosure. In use that is more than the menu needs.
+The session action and the theme toggle are single controls that belong in the
+row; burying sign-out one tap deeper costs more than it saves. The in-flow panel
+also pushed the page down when it opened, which reads as a layout change rather
+than as a menu.
+
+**Decision.** The row is `[ Log in | Log out ] [ Dark | Light ] [ ≡ ]` at every
+width. The overlay behind `[ ≡ ]` holds only the routes (Home, Podcasts, and
+Admin for an admin). It is anchored under its own button
+(`absolute right-0 top-full`), so opening it does not move the page, and it
+dismisses on an outside pointer press, on Escape, and on any row click. The
+trigger renders only when it has content — that is, when a user is signed in —
+so a signed-out visitor gets a two-button row and never an empty menu.
+
+The `md` breakpoint from entry 9 still separates the two layouts: at `md` and
+above the routes are inline in the row and the trigger is `display: none`. The
+panel carries `z-20`, below the `z-50` of the waking notice
+(`frontend/app/waking-notice.tsx`), so the notice stays on top.
+
+**Label change.** "Sign in with Google" became "Log in", and "Sign out" became
+"Log out". The always-visible row needs the shorter labels: the old sign-in
+label measured 169 px, which with the theme toggle (56 px) and the 8 px gap
+between them comes to 233 px — more than the 223 px a 375 px viewport leaves for
+the right-hand group once the brand (88 px) and the 16 px gap are subtracted.
+`frontend/components/subscription-list.tsx` names the button in its signed-out
+copy and was updated in the same change.
+
+**Transparency: not used, and why.** A translucent or frosted panel was
+considered for the overlay and rejected.
+
+- It makes contrast unmeasurable. The effective background behind the text
+  depends on whatever the panel happens to sit over, so the ratio cannot be
+  computed once and checked — the discipline `docs/DESIGN_NOTES.md` asks for
+  ("measurements beat descriptions") and that entries 3, 5 and 14 follow. A
+  solid `bg-bg` keeps `fg` on `bg` at its documented 13.95:1 / 14.88:1.
+- It fights the design language. `docs/STYLEGUIDE.md` §6 states the rule:
+  separation is a line, not a shadow or a blur. A frosted panel reads as
+  "app-y", which §1 explicitly says the Zorn palette is meant not to be.
+- It buys nothing here. Without a shadow (banned by §4.4) a translucent panel
+  still needs a border to be legible, so transparency adds a compositing layer
+  and a `backdrop-filter` without adding separation.
+- The project already treats opacity as the wrong tool for this: entry 7
+  replaced `text-fg/70` with the `muted` token, and the lint config
+  (`frontend/eslint.config.mjs`) rejects `bg-fg/…` outright.
+
+The overlay is therefore `bg-bg` with a 2 px `border-fg` and sharp corners,
+where the thicker border is the "above" signal that §4.4 prescribes.
+
+**Row hover and focus.** A route row inverts to `bg-fg text-bg` on hover and on
+`focus-visible`, matching `BaseButton`'s `outline` variant. The shared focus
+ring is deliberately not reused: an offset ring around a full-bleed row collides
+with the panel border and with the dividers between rows, and the inversion
+already measures 13.95:1 / 14.88:1.
+
+**Supersedes entry 23.** Entry 23 described the in-flow disclosure that this
+entry replaces. It is left in place per the append-only rule; its measurements
+remain accurate, its layout decision does not apply.
+
+**Alternatives considered.**
+
+| Option | Why not |
+| --- | --- |
+| Keep auth inside the menu (entry 23) | The two controls it covered are single actions that fit in the row, and it made the header's contents depend on menu state. |
+| Frosted / translucent panel | Unmeasurable contrast, against §6, and no separation benefit without a shadow. See above. |
+| Full-screen overlay menu | Four routes do not justify covering the page, and it would need scroll locking and a focus trap — the point at which Radix becomes the right answer (entry 1). |
+| Radix `DropdownMenu` | Still deferred. The panel is anchored to a static parent and holds three links, so there is no collision or roving-focus problem for a library to solve. |

@@ -158,8 +158,7 @@ export default function SubscriptionList() {
         <BaseCard className="w-full max-w-md p-8">
           <h1 className="font-mono text-2xl">Your podcasts</h1>
           <p className="mt-2 text-sm text-muted">
-            Sign in to see your podcasts. Use the &quot;Sign in with Google&quot; button in the
-            header.
+            Log in to see your podcasts. Use the &quot;Log in&quot; button in the header.
           </p>
         </BaseCard>
       </main>
