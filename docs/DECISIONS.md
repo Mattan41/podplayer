@@ -954,3 +954,129 @@ object. `frontend/lib/api/podcast.ts` `listEpisodes` takes `page`/`size` and
 returns `EpisodePageDto`, and the `PodcastSource` interface follows; the episode
 view accumulates pages and gains a Load more control. See `docs/api/podcasts.md`
 and `docs/roadmap/library-ui.md`.
+
+## 26. The audio element lives in the layout and is a singleton
+
+**Context.** Every route that can play an episode needs the same media element, and
+navigating between routes must not interrupt playback. An element rendered inside a page
+would be unmounted by the App Router the moment the route changed, and the sound would
+stop (or restart on a re-mount).
+
+**Decision.** Render exactly one media element, once, in `frontend/app/layout.tsx`, as
+`<AudioElement />`. `PlayerProvider` owns a ref to it and drives `src` and playback
+imperatively; the element pipes its native events (`loadedmetadata`, `timeupdate`,
+`playing`, `pause`, `ended`, `error`) back into the reducer. `grep -rn '<audio'
+frontend/app frontend/components` returns exactly one line, in `audio-element.tsx`.
+
+**Consequence.** Client-side navigation leaves the element mounted, so playback
+continues across routes. Measured in headless Chrome 154.0.8037.57: a client navigation
+to `/podcasts` and back left `document.querySelectorAll('audio').length === 1` and
+`audio.paused === false` on both hops. Because the element is detached from any route,
+the players are the only controls — there is no `<audio controls>` — which is why the
+mini and full players are their own components. One episode plays at a time; that is
+acceptable until the BACKLOG queue exists.
+
+**Why the ref lives in the provider, not the element.** The provider is what reacts to
+an episode change (its `useEffect` runs on `episode`) and it must read the same element
+the layout renders. A ref created in the element and passed up would invert ownership.
+
+## 27. The full player is a Dialog, not a route
+
+**Context.** The full player could have been a `/player` route or a dialog over the
+current view. A route would unmount the current page and re-render the tree, and — since
+the media element lives in the layout — it would also take the mini player out of the
+picture while the full view is up.
+
+**Decision.** The full player is a `BaseDialog` (Radix Dialog) opened over the current
+view. It is rendered by `MiniPlayer`, so `layout.tsx` gains a single player mount point
+and the dialog still lives above every route. Radix supplies Escape-to-close, the focus
+trap inside the dialog, and focus restoration to the expand control on close.
+
+**Consequence.** The dialog shows artwork, title, description, the shared scrubber, the
+elapsed and total readout, and a play/pause control. Measured in headless Chrome: the
+panel reported `role="dialog"`, contained the title and the `img`, six real Tab presses
+never left it (`document.contains(document.activeElement)` was true every time), Escape
+closed it, and playback continued (`audio.paused === false`) after close. Both players
+render the one `scrubber.tsx`, so the two views cannot drift.
+
+**Alternatives considered.** A `/player` route: re-renders the tree and needs its own
+back affordance; rejected. A hand-rolled overlay: no focus trap without writing one,
+which is the interaction entry 1 says to buy rather than build.
+
+## 28. Radix is installed now, per entry 1's trigger
+
+**Context.** Entry 1 deferred `@radix-ui/*` until "the first component that genuinely
+requires it". The player scrubber (a slider) and the full player (a dialog) are that
+component, exactly as the base README's "Not here yet" section predicted.
+
+**Decision.** Install exactly two packages, `@radix-ui/react-slider@^1.4.7` and
+`@radix-ui/react-dialog@^1.1.23`, and no meta-package. Wrap them in the base layer as
+`BaseSlider` and `BaseDialog`. `@radix-ui/*` moves from the "not approved" table to the
+"approved" table in `docs/DESIGN_NOTES.md`.
+
+**Consequence — the base layer now has a client boundary.** Every existing base
+component is hook-free and declares no `"use client"`; `BaseSlider` and `BaseDialog` do,
+because Radix uses hooks. Importing the `@/components/base` barrel therefore pulls a
+client boundary for whatever imports it, which the base README already anticipated
+("If a base component ever has to become a client component, record the decision"). No
+server component imports the barrel today; `layout.tsx` imports the player components
+directly.
+
+**Consequence — two styling choices the base layer now owns.** The slider track is a 1px
+`fg` hairline filled with `accent`, and its thumb is a focal circle (`rounded-full`) in
+`border-cta` — the third and last place the README allows full rounding. The dialog
+scrim is a solid `fg` fill rather than a translucent one, because there is no overlay
+token and an opacity utility on `fg` is banned by lint (entry 7); a full-bleed scrim
+also matches the "expands over the current view" intent. Neither choice is a new color
+or a new variant.
+
+**Alternatives considered.** The `radix-ui` meta-package: pulls every primitive for two,
+against the phase's "no meta-package" constraint. A native `input[type=range]`: no
+keyboard or ARIA slider semantics worth shipping, and no clean filled track in the
+tokens. Keeping the dialog hand-rolled: see entry 27.
+
+## 29. PlayerProvider state shape, and why Context is enough until Phase E
+
+**Context.** Playback is a small state machine — nothing loaded, loading, playing,
+paused, errored — plus the loaded episode and the full-player flag. A store library is
+listed as "not needed yet; revisit when playback state exists" in `docs/DESIGN_NOTES.md`.
+
+**Decision.** `useReducer` + Context in `frontend/lib/player-context.tsx`. The state is
+one object, `{ episode, status, currentTime, duration, error, isFullPlayerOpen }`, with
+actions `load`, `metadata`, `time`, `playing`, `paused`, `ended`, `seek`, `error`,
+`stop`, `full`. The context exposes `playEpisode`, `toggle`, `seek`, `stop`,
+`setFullPlayerOpen`, the shared `audioRef`, and the six native media-event handlers.
+
+**Consequence.** No new dependency for state, and no prop drilling: the consumers are the
+two player views and the episode rows. The reducer is a pure function, which is what lets
+DOM media events feed it without the provider holding derived state. One rule is load-
+bearing and easy to miss: every event action is ignored once `episode` is `null`, because
+`stop` removes the source and the browser then emits `pause`/`error` asynchronously for an
+element that no longer belongs to an episode — without the guard those events would
+resurrect a mini player that was just closed (observed while writing this phase).
+
+**Revisit.** Phase E persists and restores position. If resume-on-mount, cross-device
+writes and optimistic updates make the reducer hard to follow, that is the signal to
+introduce a store — and that introduction is its own DECISIONS entry, not a quiet
+refactor.
+
+## 30. EpisodeDto is the type the player consumes
+
+**Context.** The player needs a title, an `audioUrl`, a duration and artwork. The
+temptation is a narrower `PlayableEpisode` type.
+
+**Decision.** The player consumes the existing `EpisodeDto` from `lib/api/podcast.ts`
+directly. `playEpisode` takes an `EpisodeDto` and the reducer stores one. No new type, no
+mapper.
+
+**Consequence.** A row in `episodes-view.tsx` calls `playEpisode(episode)` with the object
+it already has, so there is no second representation to keep in sync and no projection
+that could drop a field the player later needs. The cost is coupling to the API DTO; if
+Phase E or G needs a different shape (a resolved local blob URL for offline audio, for
+example), the right move is a new entry and a deliberate adapter, not a silent widening
+of `EpisodeDto`.
+
+**Alternatives considered.** A `PlayableEpisode` union with a `source` discriminator, to
+anticipate offline playback. Rejected: it is a shape for a phase that does not exist, and
+ARCHITECTURE §5 rule 8 ("Contract First") prefers one type that mirrors the backend until
+a real second source appears.

@@ -126,6 +126,7 @@ Currently approved:
 | `next` | Scaffolding | Framework. |
 | `react`, `react-dom` | Scaffolding | Framework. |
 | `tailwindcss` + PostCSS plugin | Scaffolding | Styling. |
+| `@radix-ui/react-slider`, `@radix-ui/react-dialog` | Phase D | Headless Slider and Dialog for the player scrubber and the full player. Deliberately these two only; adding another primitive is a new `DECISIONS.md` entry. |
 
 Not approved, and the reason:
 
@@ -133,8 +134,8 @@ Not approved, and the reason:
 | --- | --- |
 | `tailwind-merge` | Not needed. Base components do not set classes callers are expected to override. See `frontend/components/base/README.md` §2. |
 | `clsx` | Not needed. `cn` in `frontend/components/base/cn.ts` covers the requirement. |
-| `@radix-ui/*` | Deferred. Install with the first component that genuinely requires it. See `DECISIONS.md` entry 1. |
-| Any state library (Zustand, Redux, Jotai) | Not needed yet. React Context is sufficient for auth state. Revisit when playback state exists. |
+| Any state library (Zustand, Redux, Jotai) | Still not needed. React Context is sufficient for auth state, and `useReducer` + Context carries playback as of Phase D (`DECISIONS.md` entry 29). Revisit in Phase E only if persistence makes the reducer hard to follow. |
+| Any audio library | Not needed. The platform media element plus the player context covers Phase D; nothing here warrants a wrapper. |
 
 A new dependency requires an entry in `DECISIONS.md` before it is added.
 The entry must state the problem, the alternatives considered, and the

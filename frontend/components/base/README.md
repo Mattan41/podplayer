@@ -26,11 +26,13 @@ values, no palette names, no Tailwind `dark:` variant.
 | `BaseField` | `<label>` | Labels one control in the standard stacked layout. |
 | `BaseInput` | `<input>` | Single-line text input. Supports `invalid`. |
 | `BaseSelect` | `<select>` | Native select. Supports `invalid`. |
+| `BaseDialog` | Radix Dialog | Modal dialog; focus trap and Escape close. **Client component.** |
+| `BaseSlider` | Radix Slider | Seek/progress slider; thumb is a focal circle. **Client component.** |
 
 Import through the barrel:
 
 ```tsx
-import { BaseButton, BaseCard, BaseField, BaseInput, BaseSelect } from "@/components/base";
+import { BaseButton, BaseCard, BaseDialog, BaseField, BaseInput, BaseSelect, BaseSlider } from "@/components/base";
 ```
 
 `cn` and the internal class constants are deliberately not exported.
@@ -146,6 +148,58 @@ disabled:opacity-50`), matching `BaseButton`.
 `BaseSelect` wraps a native `<select>`; `docs/DECISIONS.md` entry 2 records why a
 Radix Select was not used.
 
+## BaseSlider
+
+A slider built on `@radix-ui/react-slider` — the first component that genuinely
+needed a headless primitive (`docs/DECISIONS.md` entries 1 and 28).
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `value` | `number` | – |
+| `min` | `number` | `0` |
+| `max` | `number` | – |
+| `step` | `number` | `1` |
+| `disabled` | `boolean` | `false` |
+| `onValueChange` | `(value: number) => void` | – |
+| `onValueCommit` | `(value: number) => void` | – |
+| `aria-label` | `string` | – |
+| `className` | `string` | – |
+
+The value is controlled and the caller owns it: pass the current value in, and
+update it from `onValueChange` (continuous, while dragging) or `onValueCommit`
+(once, on release). `max` must be greater than `min`, so a caller with an unknown
+range passes a placeholder max and disables the slider.
+
+The track is a 1px `fg` hairline, the filled portion is `accent`, and the thumb is
+a focal circle (`rounded-full`) bordered in `cta` — one of the three places full
+rounding is allowed. **No width is set**, because layout belongs to the caller
+(Convention 2); a slider in a flex row passes `flex-1`.
+
+**It is a client component**, unlike the button/card/field/input/select set,
+because Radix uses hooks. That pulls a client boundary up the tree for every
+consumer; see Convention 3 and `docs/DECISIONS.md` entry 28.
+
+## BaseDialog
+
+A modal dialog built on `@radix-ui/react-dialog`; the full player is its only
+consumer in Phase D (`docs/DECISIONS.md` entry 27).
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `open` | `boolean` | – |
+| `onOpenChange` | `(open: boolean) => void` | – |
+| `title` | `string` | – |
+| `children` | `ReactNode` | – |
+| `className` | `string` | – |
+
+`title` is rendered as `Dialog.Title`, which Radix requires for an accessible
+name; there is no description slot, so the content association is dropped
+explicitly to avoid a runtime warning. Radix supplies the focus trap,
+Escape-to-close and focus restoration. The scrim is a solid `fg` fill — there is
+no overlay token, and an opacity utility on `fg` is banned (Convention 1).
+
+**It is a client component**, for the same reason as `BaseSlider`.
+
 ## Conventions
 
 ### 1. Styling
@@ -164,9 +218,10 @@ theme radius (`--theme-radius`), which Zorn sets to `0px`, so a skin can change
 the corner radius without any component changing.
 
 Fully circular elements are permitted in exactly three places (play button,
-avatar, scrubber handle), none of which exist yet. Those keep `rounded-full`
-explicitly and are deliberately not affected by the theme radius. Never an
-intermediate radius (`rounded-sm`, `rounded-md`, ...).
+avatar, scrubber handle). The scrubber handle (`BaseSlider`'s thumb) is the first
+to exist, as of Phase D; the play button and avatar are still only planned. Those
+keep `rounded-full` explicitly and are deliberately not affected by the theme
+radius. Never an intermediate radius (`rounded-sm`, `rounded-md`, ...).
 
 ### 2. Base components must not set classes that callers are expected to override
 
@@ -188,20 +243,27 @@ In practice:
 
 Appearance classes belong to the component. Layout classes belong to the caller.
 
-### 3. No `"use client"` directive
+### 3. `"use client"` only where a primitive requires it
 
-None of these components declare a client boundary. They contain no hooks and no
-browser API, so they belong to whichever graph imports them: a client component
-inherits them, and a server component can render them as static markup.
+`BaseButton`, `BaseCard`, `BaseField`, `BaseInput` and `BaseSelect` declare no
+client boundary. They contain no hooks and no browser API, so they belong to
+whichever graph imports them: a client component inherits them, and a server
+component can render them as static markup.
 
-The consequence, which is easy to hit: importing one of these into a **server**
-component and passing an event handler fails at build time, because functions
-cannot cross the server-to-client boundary. `frontend/app/layout.tsx` is this app's
-only server component today, and it renders `<Header />` successfully precisely
-because `frontend/app/header.tsx` declares its own `"use client"`.
+`BaseSlider` and `BaseDialog` are the exceptions. Radix uses hooks, so both
+declare `"use client"` and pull a client boundary up the tree for every consumer
+of the barrel. The decision is recorded in `docs/DECISIONS.md` entry 28, as this
+section previously asked.
 
-If a base component ever has to become a client component, record the decision: it
-moves the boundary up the tree for every consumer.
+The consequence for the hook-free set, which is easy to hit: importing one of them
+into a **server** component and passing an event handler fails at build time,
+because functions cannot cross the server-to-client boundary.
+`frontend/app/layout.tsx` is this app's only server component today, and it renders
+`<Header />` successfully precisely because `frontend/app/header.tsx` declares its
+own `"use client"`.
+
+If another base component has to become a client component, record the decision
+too: it moves the boundary up the tree for every consumer.
 
 ### 4. Focus indicators
 
@@ -238,7 +300,8 @@ distinct outline rather than merging into the edge.
 
 ## Not here yet
 
-`BaseDialog`, `BaseModal`, `BaseSlider` and `BaseTabs` are intentionally absent.
-They need a headless primitive library, and `@radix-ui/*` is not installed. See
-`docs/DECISIONS.md` entry 1: the first component that genuinely needs a primitive
-brings the dependency with it.
+`BaseModal` and `BaseTabs` remain absent. They need a headless primitive library;
+`@radix-ui/*` is now installed (`BaseSlider` and `BaseDialog`, `docs/DECISIONS.md`
+entry 28), so adding either is a component plus, for `BaseTabs`, the first real use
+case. `docs/STYLEGUIDE.md` §7 keeps the project on one primitive library — Radix —
+rather than mixing in a second.

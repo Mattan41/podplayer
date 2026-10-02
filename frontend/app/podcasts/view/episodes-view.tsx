@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { PodcastApiError, type EpisodeDto } from "@/lib/api/podcast";
 import { usePodcastSource } from "@/lib/podcast-source";
+import { usePlayer } from "@/lib/player-context";
 import { episodesCacheKey, setCached, withCache } from "@/lib/podcast-cache";
 import { BaseButton, BaseCard } from "@/components/base";
 
@@ -98,6 +99,7 @@ export default function EpisodesView() {
   const isValidId = Number.isInteger(podcastId) && podcastId > 0;
 
   const source = usePodcastSource();
+  const { state, playEpisode } = usePlayer();
 
   const [episodes, setEpisodes] = useState<EpisodeDto[]>([]);
   const [page, setPage] = useState(0);
@@ -303,13 +305,27 @@ export default function EpisodesView() {
           <ul>
             {episodes.map((episode) => {
               const duration = formatDuration(episode.durationSeconds);
+              const isCurrent = state.episode?.id === episode.id;
+              const isPlaying = isCurrent && state.status === "playing";
               return (
                 <li key={episode.id} className="border-b border-fg px-6 py-4 last:border-b-0">
-                  <p>{episode.title}</p>
-                  <p className="mt-1 text-xs text-muted">
-                    {formatPublishedAt(episode.publishedAt)}
-                    {duration ? ` · ${duration}` : ""}
-                  </p>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p>{episode.title}</p>
+                      <p className="mt-1 text-xs text-muted">
+                        {formatPublishedAt(episode.publishedAt)}
+                        {duration ? ` · ${duration}` : ""}
+                      </p>
+                    </div>
+                    <BaseButton
+                      variant="outline"
+                      size="sm"
+                      onClick={() => playEpisode(episode)}
+                      aria-label={isPlaying ? `Pause ${episode.title}` : `Play ${episode.title}`}
+                    >
+                      {isPlaying ? "Pause" : "Play"}
+                    </BaseButton>
+                  </div>
                 </li>
               );
             })}

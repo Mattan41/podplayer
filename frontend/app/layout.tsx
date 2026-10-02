@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Header from "./header";
 import WakingNotice from "./waking-notice";
+import AudioElement from "@/components/player/audio-element";
+import MiniPlayer from "@/components/player/mini-player";
 import { AuthProvider } from "@/lib/auth-context";
+import { PlayerProvider } from "@/lib/player-context";
 import { PodcastSourceProvider } from "@/lib/podcast-source";
 import { ThemeProvider } from "@/lib/theme-context";
 import "./globals.css";
@@ -53,9 +56,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider>
           <AuthProvider>
             <PodcastSourceProvider>
-              <Header />
-              <WakingNotice />
-              {children}
+              <PlayerProvider>
+                <Header />
+                <WakingNotice />
+                {children}
+                {/*
+                  The single media element and the player surface live here, in
+                  the layout, so a route change cannot unmount them and stop
+                  playback. See docs/DECISIONS.md entry 26.
+                */}
+                <AudioElement />
+                <MiniPlayer />
+              </PlayerProvider>
             </PodcastSourceProvider>
           </AuthProvider>
         </ThemeProvider>

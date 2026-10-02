@@ -4,7 +4,12 @@ Play the episodes the library lists. A single `<audio>` element, a mini player
 that persists across routes, and a full player that expands over the current
 view. No state is saved to the backend; that is Phase E.
 
-**Status: not started.**
+**Status: in progress.** Frontend code complete, lint and build green, browser
+behaviour measured in headless Chrome. Not yet committed. Beyond the two doc
+files named below, `frontend/components/base/README.md`, `ARCHITECTURE.md` §2
+and the approved-dependency table in `docs/DESIGN_NOTES.md` were also updated,
+because the base component API and the stack changed. See `DECISIONS.md`
+entries 26–30.
 
 ## Deliverables
 

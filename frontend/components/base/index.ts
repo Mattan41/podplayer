@@ -10,6 +10,9 @@ export type { BaseButtonProps, BaseButtonSize, BaseButtonVariant } from "./BaseB
 export { BaseCard } from "./BaseCard";
 export type { BaseCardProps } from "./BaseCard";
 
+export { BaseDialog } from "./BaseDialog";
+export type { BaseDialogProps } from "./BaseDialog";
+
 export { BaseField } from "./BaseField";
 export type { BaseFieldProps } from "./BaseField";
 
@@ -18,3 +21,6 @@ export type { BaseInputProps } from "./BaseInput";
 
 export { BaseSelect } from "./BaseSelect";
 export type { BaseSelectProps } from "./BaseSelect";
+
+export { BaseSlider } from "./BaseSlider";
+export type { BaseSliderProps } from "./BaseSlider";

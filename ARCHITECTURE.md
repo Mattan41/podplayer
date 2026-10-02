@@ -10,7 +10,7 @@ A web-based podcast player focused on a disciplined, clean user experience with 
 
 ### Frontend
 - **Framework:** Next.js (App Router, TypeScript)
-- **Styling:** Tailwind CSS v4 + Radix UI Primitives (headless; deferred, see docs/DECISIONS.md entry 1)
+- **Styling:** Tailwind CSS v4 + Radix UI Primitives (headless; `@radix-ui/react-slider` and `@radix-ui/react-dialog` as of Phase D, see docs/DECISIONS.md entries 1 and 28)
 - **Hosting:** GitHub Pages (Static Site Generation / SSG via `output: 'export'`)
 - **Domain:** `podplayer.kruskopf.org` (Cloudflare CNAME pointing to GitHub Pages, DNS-only / gray cloud)
 
