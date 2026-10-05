@@ -1321,3 +1321,45 @@ provider mounted.
 **Cross-reference.** Entry 22 made the same kind of seam choice for the read
 cache and `PodcastSource`; this entry follows it.
 
+## 40. The Zustand revisit in entry 29 happened, and the answer was a hook
+
+**Context.** Entry 29 said: "If resume-on-mount, cross-device writes and
+optimistic updates make the reducer hard to follow, that is the signal to
+introduce a store — and that introduction is its own DECISIONS entry, not a
+quiet refactor." Phase E added resume-on-mount and cross-device writes.
+`frontend/lib/player-context.tsx` is now 539 lines, and
+`docs/roadmap/playback-state.md` records that the persistence concern would be
+better as a `usePlaybackPersistence` hook.
+
+**Decision.** The revisit happened. The answer is not to introduce a state
+library. It is to extract the persistence concern into a hook, in a later phase,
+so that `PlayerProvider` keeps its current shape and its existing tests keep
+passing.
+
+**Consequence.** Zustand remains uninstalled. If the hook extraction turns out
+not to be enough — for example if the player state has to be read from outside
+the provider tree, which a service worker in Phase F cannot do through Context —
+that is a new trigger and a new entry. Until then, Context is sufficient.
+
+**Cross-reference.** Entry 29 (the trigger), entry 22 (the same pattern of
+deferring a dependency until a measured problem exists).
+
+## 41. CI runs the frontend tests, not just the lint
+
+**Context.** `.clinerules` requires "`npm test` must pass".
+`.github/workflows/deploy-frontend.yml` ran only Install → Lint → Build. A
+commit could land with failing tests and the deploy would succeed. This is the
+same class of gap that entry 12 closed for `npm run lint`.
+
+**Decision.** Add a Test step to the frontend deploy workflow, between Lint and
+Build. The step needs no environment variables: the suite uses jsdom and mocks
+every network boundary, and `vitest.setup.ts` provides dummy `NEXT_PUBLIC_*`
+values so the module graph loads.
+
+**Consequence.** A failing test blocks the Pages deploy the same way a lint
+error does. The workflow has no `pull_request` trigger, so a violation does not
+prevent a commit from reaching `main`; what it prevents is the deploy, and the
+site keeps serving the last commit that passed. Same trade as entry 12.
+
+**Cross-reference.** Entry 12 (the lint step, same mechanism).
+

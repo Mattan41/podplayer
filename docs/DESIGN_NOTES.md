@@ -110,6 +110,9 @@ executes it — `npm run lint`, a CI job, a test — and that process is itself
 verified once, by watching it fail on a deliberate violation before trusting it
 to pass on clean code.
 
+`npm test` runs in the frontend deploy workflow (`DECISIONS.md` entry 41),
+between lint and build, and needs no environment variables.
+
 ---
 
 ## Approved dependencies

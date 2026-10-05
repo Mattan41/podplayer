@@ -65,6 +65,7 @@ would enable, so it can be prioritised later without re-reading old chats.
   problem-details advice, so `401` has an empty body. The current clients do not
   read it, so this is cosmetic; it matters if a client ever needs the reason.
   Documented as an empty body in docs/api/podcasts.md in the meantime.
+  - Run backend tests in CI with Testcontainers. The backend suite needs a database; today it points at Supabase via env vars, which is why ./mvnw test cannot run in CI without secrets. Testcontainers starts a throwaway PostgreSQL in the workflow, runs Flyway against it, and tears it down. Three test dependencies, no secrets. Not scheduled.
 
 ## Performance
 
