@@ -4,7 +4,7 @@ Play the episodes the library lists. A single `<audio>` element, a mini player
 that persists across routes, and a full player that expands over the current
 view. No state is saved to the backend; that is Phase E.
 
-**Status: in progress.** Frontend code complete, lint and build green, browser
+**Status: done.** Frontend code complete, lint and build green, browser
 behaviour measured in headless Chrome. Beyond the two doc
 files named below, `frontend/components/base/README.md`, `ARCHITECTURE.md` §2
 and the approved-dependency table in `docs/DESIGN_NOTES.md` were also updated,
@@ -49,7 +49,7 @@ Docs:
   installed now, per entry 1's trigger; (4) `PlayerProvider` state shape and why
   Context is enough until Phase E proves otherwise; (5) `EpisodeDto` is the type
   the player consumes, not a new `PlayableEpisode`.
-- `docs/ROADMAP.md` — mark Phase D in progress.
+- `docs/ROADMAP.md` — mark Phase D done.
 
 ## Acceptance criteria
 

@@ -37,7 +37,7 @@ Step 4 is delivered as six phases. See `docs/roadmap/` for each.
 | A | [Domain model](roadmap/domain-model.md) — **done** | Step 3 |
 | B | [Feed ingestion](roadmap/feed-ingestion.md) — **done** | Phase A |
 | C | [Library UI](roadmap/library-ui.md) — **done** | Phase B |
-| D | [Playback engine](roadmap/playback-engine.md) — **in progress** | Phase A (playback state schema), Phase C |
+| D | [Playback engine](roadmap/playback-engine.md) — **done** | Phase A (playback state schema), Phase C |
 | E | [Playback state](roadmap/playback-state.md) — **done** | Phase D |
 | F | [PWA and Media Session](roadmap/pwa-media-session.md) | Phase E |
 
@@ -74,7 +74,7 @@ The `PlayerProvider`, the `<audio>` element, the mini and full player
 views. Introduces `@radix-ui/react-slider` and `@radix-ui/react-dialog`;
 see `DECISIONS.md` entry 1 for why Radix arrives here and not earlier.
 
-In progress. Frontend code complete: `player-context.tsx`, `AudioElement`,
+Done. Frontend code complete: `player-context.tsx`, `AudioElement`,
 `MiniPlayer`, `FullPlayer`, `Scrubber`, `BaseSlider` and `BaseDialog`, with a
 play control on each episode row. `npm run lint` and `npm run build` both exit
 0; the singleton, grep and browser-behaviour criteria are measured. See
