@@ -12,6 +12,7 @@ import {
   type RefObject,
 } from "react";
 import type { EpisodeDto } from "@/lib/api/podcast";
+import { usePlaybackSource } from "@/lib/playback-source";
 
 /**
  * Playback state for the one episode the app can play at a time.
@@ -39,6 +40,23 @@ export type PlayerState = {
  * `MediaError` code is not worth translating for the user.
  */
 const AUDIO_ERROR_MESSAGE = "This episode's audio could not be played.";
+
+/**
+ * The periodic write interval, in milliseconds.
+ *
+ * `timeupdate` fires roughly four times a second; writing on every tick would be
+ * four database writes a second per active listener. The provider writes at most
+ * once per interval instead. Thirty seconds is a decision, not a measurement:
+ * losing 30 seconds of position is cheap, a write every few seconds across the
+ * user base is not. See docs/roadmap/playback-state.md.
+ *
+ * The pause write is exempt. A pause is an explicit signal that the user is
+ * about to leave, so it writes however recently the last periodic write was.
+ */
+const PERIODIC_WRITE_MS = 30_000;
+
+/** `HTMLMediaElement.HAVE_METADATA`: `currentTime` is ignored before this. */
+const HAVE_METADATA = 1;
 
 type Action =
   | { type: "load"; episode: EpisodeDto }
@@ -178,6 +196,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const isFullPlayerOpenRef = useRef(false);
 
   const { episode } = state;
+  const playbackSource = usePlaybackSource();
+
+  /*
+   * The resume position resolved for the current episode, applied once the
+   * element knows its duration. `null` means no position is pending.
+   */
+  const resumeRef = useRef<{ episodeId: number; seconds: number } | null>(null);
+  /* The episode the player is on, so a read that resolves late is ignored. */
+  const activeEpisodeIdRef = useRef<number | null>(null);
+  /* When the last periodic write fired; `null` until the current episode loads. */
+  const lastPeriodicWriteAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -232,12 +261,116 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     window.history.back();
   }, [state.isFullPlayerOpen]);
 
+  /**
+   * Stores the current position of `target`.
+   *
+   * A failed save is dropped: no retry, no queue, no user-visible error. The next
+   * time a write event fires, the then-current position is stored. Do not add a
+   * queue here; see docs/roadmap/playback-state.md.
+   */
+  const writeCurrentPosition = useCallback(
+    (target: EpisodeDto, forceCompleted = false) => {
+      const audio = audioRef.current;
+      if (!audio) {
+        return;
+      }
+      const positionSeconds = Math.max(0, Math.floor(audio.currentTime));
+      const duration = audio.duration;
+      // The roadmap's rule for the flag: playback reached the end when the
+      // position is within a second of the duration. `forceCompleted` is for the
+      // `ended` event, the completion signal whether or not the browser also
+      // fires `pause` (Safari does not always).
+      const completed =
+        forceCompleted ||
+        (Number.isFinite(duration) && duration > 0 && positionSeconds >= duration - 1);
+      void playbackSource.savePosition(target.id, positionSeconds, completed).catch(() => {
+        // Dropped on purpose. See the docstring.
+      });
+    },
+    [playbackSource],
+  );
+
+  /**
+   * Applies a resolved resume position to the element, when both the read and the
+   * metadata have arrived. `currentTime` is ignored before `HAVE_METADATA`, so
+   * this is a no-op until then, and the `loadedmetadata` handler calls it again.
+   */
+  const applyResume = useCallback(() => {
+    const audio = audioRef.current;
+    const pending = resumeRef.current;
+    if (!audio || !pending || audio.readyState < HAVE_METADATA) {
+      return;
+    }
+    resumeRef.current = null;
+    // A stored position past the duration is a data error, not a user state:
+    // start at 0 rather than at the end, and never throw.
+    audio.currentTime = pending.seconds > audio.duration ? 0 : pending.seconds;
+  }, []);
+
+  /**
+   * Reads the stored position for an episode and, when it is still the current
+   * one, records where to start. A failed read is not a reason to refuse to play:
+   * the position falls back to 0 and nothing is logged.
+   */
+  const resolveResume = useCallback(
+    async (episodeId: number) => {
+      let seconds = 0;
+      try {
+        const stored = await playbackSource.getPosition(episodeId);
+        if (stored && !stored.completed) {
+          seconds = stored.positionSeconds;
+        }
+      } catch {
+        // Start at 0. The write path is the one that matters.
+        seconds = 0;
+      }
+      if (activeEpisodeIdRef.current !== episodeId) {
+        return;
+      }
+      resumeRef.current = { episodeId, seconds };
+      applyResume();
+    },
+    [playbackSource, applyResume],
+  );
+
+  /*
+   * Writes the position on `pagehide` and `beforeunload`, so a closing tab keeps
+   * its place. `pagehide` is the reliable one on mobile; `beforeunload` is kept
+   * because desktop Chrome fires it and nothing else. Both call the same write.
+   * Re-registered when the episode changes so it closes over the current one.
+   */
+  useEffect(() => {
+    const writeOnExit = () => {
+      if (episode) {
+        writeCurrentPosition(episode);
+      }
+    };
+    window.addEventListener("pagehide", writeOnExit);
+    window.addEventListener("beforeunload", writeOnExit);
+    return () => {
+      window.removeEventListener("pagehide", writeOnExit);
+      window.removeEventListener("beforeunload", writeOnExit);
+    };
+  }, [episode, writeCurrentPosition]);
+
   const toggle = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || !audio.currentSrc) {
       return;
     }
     if (audio.paused) {
+      // A finished episode starts over. The roadmap's "cleared when the user
+      // presses play on a completed episode": the position is at (or within a
+      // second of) the end, and pressing play means hear it again from the top.
+      // The state is local, so no read is needed.
+      if (
+        Number.isFinite(audio.duration) &&
+        audio.duration > 0 &&
+        audio.currentTime >= audio.duration - 1
+      ) {
+        audio.currentTime = 0;
+        dispatch({ type: "seek", currentTime: 0 });
+      }
       audio.play().catch((error: unknown) => {
         dispatch({ type: "error", message: describePlayFailure(error) });
       });
@@ -252,9 +385,18 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         toggle();
         return;
       }
+      if (episode) {
+        // Store the episode being left under its own id, before the new one loads.
+        writeCurrentPosition(episode);
+      }
+      activeEpisodeIdRef.current = next.id;
+      resumeRef.current = null;
+      lastPeriodicWriteAtRef.current = Date.now();
       dispatch({ type: "load", episode: next });
+      // The stored position is read in parallel and applied once metadata is known.
+      void resolveResume(next.id);
     },
-    [episode, toggle],
+    [episode, toggle, writeCurrentPosition, resolveResume],
   );
 
   const seek = useCallback((seconds: number) => {
@@ -273,6 +415,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       audio.removeAttribute("src");
       audio.load();
     }
+    activeEpisodeIdRef.current = null;
+    resumeRef.current = null;
     dispatch({ type: "stop" });
   }, []);
 
@@ -306,18 +450,46 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (audio) {
       dispatch({ type: "metadata", duration: audio.duration });
     }
-  }, []);
+    // The read may have resolved before the metadata; apply it now if so.
+    applyResume();
+  }, [applyResume]);
 
   const handleTimeUpdate = useCallback(() => {
     const audio = audioRef.current;
-    if (audio) {
-      dispatch({ type: "time", currentTime: audio.currentTime });
+    if (!audio) {
+      return;
     }
-  }, []);
+    dispatch({ type: "time", currentTime: audio.currentTime });
+    if (!episode) {
+      return;
+    }
+    // The periodic write, gated to at most one per interval. The pause write is a
+    // separate path and is not gated.
+    const now = Date.now();
+    const last = lastPeriodicWriteAtRef.current;
+    if (last === null || now - last >= PERIODIC_WRITE_MS) {
+      lastPeriodicWriteAtRef.current = now;
+      writeCurrentPosition(episode);
+    }
+  }, [episode, writeCurrentPosition]);
 
   const handlePlaying = useCallback(() => dispatch({ type: "playing" }), []);
-  const handlePause = useCallback(() => dispatch({ type: "paused" }), []);
-  const handleEnded = useCallback(() => dispatch({ type: "ended" }), []);
+  const handlePause = useCallback(() => {
+    dispatch({ type: "paused" });
+    // The pause write: exactly one, immediately, regardless of the debounce.
+    if (episode) {
+      writeCurrentPosition(episode);
+    }
+  }, [episode, writeCurrentPosition]);
+  const handleEnded = useCallback(() => {
+    dispatch({ type: "ended" });
+    // The end is written here with the flag forced, rather than waiting for a
+    // later write to notice the position is at the duration: Safari does not
+    // always fire `pause` at a natural end.
+    if (episode) {
+      writeCurrentPosition(episode, true);
+    }
+  }, [episode, writeCurrentPosition]);
   const handleError = useCallback(
     () => dispatch({ type: "error", message: AUDIO_ERROR_MESSAGE }),
     [],
