@@ -86,15 +86,18 @@ public class PodcastService {
     private final PodcastRepository podcastRepository;
     private final EpisodeRepository episodeRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final PlaybackStateRepository playbackStateRepository;
     private final RssFeedParser feedParser;
 
     public PodcastService(PodcastRepository podcastRepository,
                           EpisodeRepository episodeRepository,
                           SubscriptionRepository subscriptionRepository,
+                          PlaybackStateRepository playbackStateRepository,
                           RssFeedParser feedParser) {
         this.podcastRepository = podcastRepository;
         this.episodeRepository = episodeRepository;
         this.subscriptionRepository = subscriptionRepository;
+        this.playbackStateRepository = playbackStateRepository;
         this.feedParser = feedParser;
     }
 
@@ -249,6 +252,83 @@ public class PodcastService {
         Page<Episode> result = episodeRepository.findPageByPodcastId(
                 podcastId, PageRequest.of(page, clampPageSize(size)));
         return EpisodePageDto.from(result);
+    }
+
+    /**
+     * Reads the caller's stored position in an episode.
+     *
+     * <p>A missing row is not an error the client should show: it means the
+     * episode has not been started, and the caller is expected to start at 0.
+     * It is reported as {@code 404} because the resource &mdash; this user's
+     * state for this episode &mdash; genuinely does not exist, which keeps
+     * {@link PlaybackStateDto#playedAt()} non-null on every {@code 200}.</p>
+     *
+     * @param userEmail the caller's e-mail address, in any casing
+     * @param episodeId the episode whose position is wanted
+     * @return the stored position
+     * @throws ResponseStatusException {@code 404} when nothing is stored for
+     *                                 that episode, {@code 401} when the caller
+     *                                 has no usable e-mail address
+     */
+    @Transactional(readOnly = true)
+    public PlaybackStateDto getPlaybackState(String userEmail, long episodeId) {
+        String user = normalizeUser(userEmail);
+        return playbackStateRepository.findByIdUserEmailAndIdEpisodeId(user, episodeId)
+                .map(PlaybackStateDto::from)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No playback state for episode " + episodeId));
+    }
+
+    /**
+     * Stores the caller's position in an episode, creating the row on the first
+     * write.
+     *
+     * <p>This is a read-then-mutate upsert rather than a bare {@code save} on a
+     * detached entity. {@link PlaybackState} has an {@code @EmbeddedId} and no
+     * surrogate key, so a {@code save} with an id already present is an upsert
+     * in JPA, but that would leave the timestamp semantics implicit. Reading the
+     * existing row first lets the code say plainly what is written when:</p>
+     *
+     * <ul>
+     *   <li><strong>Every write</strong> sets {@code position_seconds} and
+     *       {@code completed} from the request, and refreshes
+     *       {@code played_at} to now. {@code played_at} is the last-write
+     *       marker, not a first-seen marker &mdash; see the note on
+     *       {@link PlaybackState#getPlayedAt()}.</li>
+     *   <li><strong>Only the first write</strong> sets the row's identity, the
+     *       embedded id {@code (user_email, episode_id)}. There is no
+     *       insert-only state column in {@code playback_state}; an existing row
+     *       keeps its id and has its three state columns overwritten.</li>
+     * </ul>
+     *
+     * @param userEmail the caller's e-mail address, in any casing
+     * @param episodeId the episode being reported on
+     * @param request   the position and completion flag to store
+     * @return the stored state after the write
+     * @throws ResponseStatusException {@code 400} when the position is negative,
+     *                                 {@code 404} when no episode has that id,
+     *                                 {@code 401} when the caller has no usable
+     *                                 e-mail address
+     */
+    @Transactional
+    public PlaybackStateDto savePlaybackState(String userEmail, long episodeId,
+                                              PlaybackStateUpdateRequest request) {
+        String user = normalizeUser(userEmail);
+        if (request.positionSeconds() < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "positionSeconds must not be negative");
+        }
+        if (!episodeRepository.existsById(episodeId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No episode with id " + episodeId);
+        }
+
+        PlaybackStateId id = new PlaybackStateId(user, episodeId);
+        PlaybackState state = playbackStateRepository.findByIdUserEmailAndIdEpisodeId(user, episodeId)
+                .orElseGet(() -> new PlaybackState(id));
+        state.setPositionSeconds(request.positionSeconds());
+        state.setCompleted(request.completed());
+        state.setPlayedAt(Instant.now());
+        return PlaybackStateDto.from(playbackStateRepository.save(state));
     }
 
     private static int clampPageSize(int size) {
