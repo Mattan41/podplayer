@@ -1,7 +1,8 @@
 # Podplayer
 
 A disciplined, cross-device podcast player. **Work in progress** – the
-infrastructure, auth and access control are in place; playback is next.
+infrastructure, auth and access control are in place; playback is in place,
+and cross-device resume and the PWA are next.
 
 ## Tech Stack
 
@@ -12,4 +13,5 @@ infrastructure, auth and access control are in place; playback is next.
 ## Documentation
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) – goals, stack, principles, roadmap
+- [frontend/](frontend/README.md) – the Next.js client and how to run it
 - [infra/](infra/README.md) – how it is deployed and hosted

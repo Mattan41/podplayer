@@ -21,6 +21,13 @@ would enable, so it can be prioritised later without re-reading old chats.
   on the client (a sanitiser dependency, plus a policy for what is allowed), or
   strip the markup in the backend at ingest (loses links and changes the API
   contract). This is a decision, not a fix.
+
+## Design
+
+- **Play/pause as symbols instead of text labels.** The player currently says
+  "Play"/"Pause". A symbol is a typographic change, not a style change: which
+  glyph, and whether the header should also carry icons, belongs with the
+  skins work. Not scheduled.
 - **Swipe navigation in the full player.** Right for programme notes, left for
   the queue. Needs a gesture design, a transition model, and a decision about
   where the "views" live. Not scheduled.
@@ -31,6 +38,10 @@ would enable, so it can be prioritised later without re-reading old chats.
   Lets users migrate their subscriptions from Overcast, Pocket Casts, etc.
 - **Episode search across subscribed podcasts.** Needs indexing.
 - **Playlists / queues.** Ordered playback of multiple episodes.
+- **Differentiate / from /podcasts.** Today both render the same
+  subscription list. When playback exists, / should surface "Continue
+  listening" first, with the full library reachable via /podcasts.
+  Requires Phase E (playback state). See DECISIONS entry 21.
 
 ## Sync
 
@@ -41,7 +52,7 @@ would enable, so it can be prioritised later without re-reading old chats.
 ## Auth & accounts
 
 - **Second provider (GitHub, Apple).** Currently Google-only. See
-  DECISIONS entry 1 for why only one provider exists today.
+  DECISIONS entry 16 for why only one provider exists today.
 - **Delete account.** GDPR-adjacent. Would delete the user row and cascade
   to subscriptions and playback state.
 
@@ -50,7 +61,7 @@ would enable, so it can be prioritised later without re-reading old chats.
 - **Migrate `SPRING_DATASOURCE_PASSWORD` to Secret Manager.**
   Already in Step 5 of the roadmap.
 
-  ## Performance
+## Performance
 
 - **Lazy-load the hatman figure.** The inlined SVG is 80 KB
   (frontend/components/hatman-waking.tsx) and ends up in the shared
@@ -77,10 +88,3 @@ Two tiers. Not scheduled; after Phase D at the earliest.
 Both require a `local-source.ts` implementation of `PodcastSource`.
 The interface exists in `frontend/lib/podcast-source.ts` so neither
 tier requires rewriting consumers.
-
-## Library
-
-- **Differentiate / from /podcasts.** Today both render the same
-  subscription list. When playback exists, / should surface "Continue
-  listening" first, with the full library reachable via /podcasts.
-  Requires Phase E (playback state). See DECISIONS entry 21.

@@ -2,9 +2,11 @@
 
 Frontend: subscription list, episode list, add-podcast form. No playback.
 
-**Status: C.5 complete.** C.5 added the `PodcastSource` interface and a
+**Status: done.** C.5 added the `PodcastSource` interface and a
 localStorage read cache behind it, and wired both into the list and the
-episode view (`DECISIONS.md` entries 21 and 22). Phase D is next.
+episode view (`DECISIONS.md` entries 21 and 22). The deployed checks passed:
+subscribing to a real feed, a hard reload on the detail route, and the 403
+view were all observed on the deployed site. Phase D is next.
 
 ## Deliverables
 

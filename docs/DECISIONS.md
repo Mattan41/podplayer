@@ -1113,3 +1113,54 @@ navigation and the page does not change.
 
 **Cross-reference entry 27.** That entry stands and this one extends it; it does not
 supersede it. The player is still a Dialog, and this entry only adds the back binding.
+
+## 32. The play trigger is rectangular, not a focal circle
+
+**Context.** `docs/STYLEGUIDE.md` §1 defines the shape language as "sharp by
+default, round as exception", and §5 listed the play button as one of the
+permitted circles. Phase D then built the play trigger as a rectangular
+`BaseButton` in `mini-player.tsx`, `full-player.tsx` and `episodes-view.tsx`,
+so the documents described a shape the code does not ship.
+
+**Decision.** Play/pause is a rectangular `BaseButton`, like every other
+control. `BaseButton` owns its own shape (`frontend/components/base/README.md`
+§2), the Zorn language is sharp by default, and a round play button is a Spotify
+inheritance rather than a Zorn choice. The scrubber handle (`BaseSlider`'s
+thumb) is the one focal circle in the player.
+
+**Consequence.** Three documents were corrected, not the code:
+`ARCHITECTURE.md` §4.1, §4.5 and §5.3, `docs/STYLEGUIDE.md` §5, and
+`frontend/components/base/README.md` §1 now list only the avatar and the
+scrubber handle as permitted circles. The avatar remains planned, not built.
+
+**Alternatives considered.**
+
+| Option | Why not |
+| --- | --- |
+| Add a round `BaseButton` variant | It needs a variant per the base README's three-condition rule, for one control, and it reintroduces the Spotify shape the Zorn language rejects. |
+| Leave the documents wrong | Three documents would keep describing something the code does not do, which is the drift the audit exists to catch. |
+
+## 33. `no-img-element` is off
+
+**Context.** D.5 turned `@next/next/no-img-element` off globally in
+`frontend/eslint.config.mjs`. The rule had been flagging a pattern the project
+cannot avoid.
+
+**Decision.** The rule stays off, with the reasoning recorded in the config
+comment: every `<img>` in this app is third-party feed artwork (the podcast
+cover and the episode artwork), `next/image` cannot optimize remote hosts under
+`output: 'export'` because no image optimizer is built, and listing hosts in
+`next.config.ts` would not help because the hosts are arbitrary.
+
+**Consequence.** The guard against a future local static image using `<img>`
+instead of `next/image` is gone. Mitigation: the config comment still states
+that a local image added to `public/` should use `next/image` with explicit
+width and height, so the exemption is scoped to feed artwork by intent even
+though the rule itself is blanket.
+
+**Alternatives considered.**
+
+| Option | Why not |
+| --- | --- |
+| Per-file disables | The next `<img>` re-litigates the same decision file by file. |
+| `<Image unoptimized>` | Renders the same `<img>` underneath, and puts a Next-dependent component into a static context for no behaviour change. |

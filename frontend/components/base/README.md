@@ -217,11 +217,12 @@ independently and its contrast is a deliberate choice rather than a side effect 
 theme radius (`--theme-radius`), which Zorn sets to `0px`, so a skin can change
 the corner radius without any component changing.
 
-Fully circular elements are permitted in exactly three places (play button,
-avatar, scrubber handle). The scrubber handle (`BaseSlider`'s thumb) is the first
-to exist, as of Phase D; the play button and avatar are still only planned. Those
-keep `rounded-full` explicitly and are deliberately not affected by the theme
-radius. Never an intermediate radius (`rounded-sm`, `rounded-md`, ...).
+Fully circular elements are permitted in exactly two places (avatar, scrubber
+handle). The scrubber handle (`BaseSlider`'s thumb) is the first to exist, as of
+Phase D; the avatar is still only planned. Those keep `rounded-full` explicitly
+and are deliberately not affected by the theme radius. The player controls are
+rectangular `BaseButton`s, not focal circles. Never an intermediate radius
+(`rounded-sm`, `rounded-md`, ...).
 
 ### 2. Base components must not set classes that callers are expected to override
 

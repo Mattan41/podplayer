@@ -58,7 +58,7 @@ The visual system is **theme-based**: Zorn is the default theme, but the archite
 The shape language strictly separates two registers:
 
 1. **Sharp (Default):** `border-radius: 0` on virtually everything (buttons, panels, cards, inputs, dialogs).
-2. **Round (Exception, Sparse):** Perfectly circular elements (`border-radius: 9999px` / `50%`) used selectively for deliberate contrast (e.g., play button, user avatar, scrubber handle). **Never use intermediate rounding** (no `4px`, `8px`, `12px`). It is either 0 or a full circle.
+2. **Round (Exception, Sparse):** Perfectly circular elements (`border-radius: 9999px` / `50%`) used selectively for deliberate contrast (e.g., user avatar, scrubber handle). **Never use intermediate rounding** (no `4px`, `8px`, `12px`). It is either 0 or a full circle.
 
 ### 4.2 Zorn Palette
 
@@ -144,8 +144,8 @@ The token layer in `frontend/app/globals.css` looks like this:
  *
  * Shape is a theme property as well. --theme-radius backs the rounded-base
  * utility, so a skin can change the corner radius without any component
- * changing. Fully circular focal elements (play button, avatar, scrubber
- * handle) use rounded-full explicitly and are deliberately not affected.
+ * changing. Fully circular focal elements (avatar, scrubber handle) use
+ * rounded-full explicitly and are deliberately not affected.
  *
  * Muted (secondary) text is a token rather than an opacity utility such as
  * text-fg/70, so a skin can tint it independently instead of always deriving it
@@ -251,7 +251,7 @@ No component code changes.
 
 1. **Strict Token Usage:** Always use semantic theme classes (`bg-bg`, `text-fg`, `border-fg`, `bg-cta`). Never inline hex codes, palette names (`zorn-*`), or Tailwind's `dark:` variant in TSX components.
 2. **Static Export Constraint:** The Next.js frontend deploys to GitHub Pages (`output: 'export'`). Do not implement Next.js Node-based API routes or server-side runtime headers. All dynamic endpoints live in Spring Boot.
-3. **Shape Rule Enforcement:** Use `rounded-base` for rectangular surfaces and controls. It resolves through the theme radius (`--theme-radius`), so shape is a skin property rather than a component concern; Zorn sets it to `0`. Only designated focal elements (play trigger, avatar, scrubber thumb) may use `rounded-full`. Never intermediate radii such as `rounded-sm` or `rounded-md`.
+3. **Shape Rule Enforcement:** Use `rounded-base` for rectangular surfaces and controls. It resolves through the theme radius (`--theme-radius`), so shape is a skin property rather than a component concern; Zorn sets it to `0`. Only designated focal elements (avatar, scrubber thumb) may use `rounded-full`. Never intermediate radii such as `rounded-sm` or `rounded-md`.
 4. **Base Components:** Use the `Base*` components from `frontend/components/base/` instead of raw `button`, `input` and `select` elements. Raw elements may only appear inside that folder. Enforced by `react/forbid-elements` at level `error` in `frontend/eslint.config.mjs`, which exempts `components/base/**`.
 5. **Environment Isolation:** Never commit secrets. Backend configuration consumes environment variables for Supabase credentials. Env files live per-app: `backend/.env` (Spring), `frontend/.env.local` (Next). Root `.env` is reserved for tooling run from the repo root.
 6. **No Datasource Defaults:** `backend/src/main/resources/application.yaml` must not contain default values for `SPRING_DATASOURCE_*`; missing env vars should fail fast on startup.

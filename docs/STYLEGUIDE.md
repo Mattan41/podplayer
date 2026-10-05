@@ -64,7 +64,6 @@ The dark-mode Ivory Black should feel *cool* (slightly bluish/cold black), not n
 
 - `border-radius: 0` as global default on Button, Card, Input, Modal, Panel.
 - Exception — fully circular elements (`border-radius: 9999px` / `50%`), used deliberately on at most 1–2 elements per view:
-  - Play/pause button in mini-player and full player.
   - Avatar / podcast cover thumbnail in lists (may also be sharp — pick one and stay consistent).
   - Progress handle (draggable dot) on the scrubber line.
 - Nothing in between (no 4px/8px/12px rounding anywhere).

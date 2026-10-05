@@ -7,9 +7,8 @@ import nextTs from "eslint-config-next/typescript";
  *
  * `react/forbid-elements` keeps raw form elements inside the base component
  * folder, and `no-restricted-syntax` keeps three skin-hostile class patterns out
- * of className strings. Both rules are described in ARCHITECTURE.md §5 and in
- * frontend/components/base/README.md; they exist so the documentation cannot
- * quietly rot.
+ * of className strings. Both rules are described in ARCHITECTURE.md §5 rule 4
+ * and rule 10; they exist so the documentation cannot quietly rot.
  */
 
 /**

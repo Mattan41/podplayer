@@ -36,7 +36,7 @@ Step 4 is delivered as six phases. See `docs/roadmap/` for each.
 | --- | --- | --- |
 | A | [Domain model](roadmap/domain-model.md) — **done** | Step 3 |
 | B | [Feed ingestion](roadmap/feed-ingestion.md) — **done** | Phase A |
-| C | [Library UI](roadmap/library-ui.md) — code complete, on-site check pending; C.5 complete | Phase B |
+| C | [Library UI](roadmap/library-ui.md) — **done** | Phase B |
 | D | [Playback engine](roadmap/playback-engine.md) — **in progress** | Phase A (playback state schema), Phase C |
 | E | [Playback state](roadmap/playback-state.md) | Phase D |
 | F | [PWA and Media Session](roadmap/pwa-media-session.md) | Phase E |
@@ -60,10 +60,7 @@ Done: Rome 2.1.0, `RssFeedParser`, `PodcastService`, `PodcastController`,
 Frontend: subscription list, episode list, add-podcast form. `npm run lint`
 and `npm run build` both exit 0, and the export contains `/podcasts.html` and
 `/podcasts/view.html` — the podcast detail is a single static route that reads
-the id from `?id=`, so no dynamic segment is emitted. Three of the phase
-file's acceptance criteria need a signed-in session on the deployed site —
-subscribing to a real feed, a hard reload on the detail route, and the 403
-view — so the phase is not marked done until those are observed. See
+the id from `?id=`, so no dynamic segment is emitted. See
 `DECISIONS.md` entries 18 and 19 for why the dynamic route and its SPA
 fallback were replaced. C.5 followed in the same step: the landing page
 (`/`) is now the subscription list, and the frontend counter page is
@@ -81,7 +78,7 @@ In progress. Frontend code complete: `player-context.tsx`, `AudioElement`,
 `MiniPlayer`, `FullPlayer`, `Scrubber`, `BaseSlider` and `BaseDialog`, with a
 play control on each episode row. `npm run lint` and `npm run build` both exit
 0; the singleton, grep and browser-behaviour criteria are measured. See
-`DECISIONS.md` entries 26–30. Not yet committed.
+`DECISIONS.md` entries 26–31.
 
 ### Phase E — Playback state
 Save and restore playback position. Cross-device resume.

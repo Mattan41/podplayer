@@ -54,7 +54,12 @@ committed; see `infra/secrets.md`.
 - `app/globals.css` — the canonical theme token layer.
 - `components/base/` — shared UI primitives; see
   [`components/base/README.md`](components/base/README.md).
-- `lib/` — auth, API and theme providers.
+- `components/player/` — the playback surface (mini and full player, scrubber,
+  audio element).
+- `lib/` — auth, API, theme and player providers.
+
+`app/player-aware-main.tsx` is the shared wrapper that reserves room for the
+fixed player bar under every route's content.
 
 ## Deployment
 
