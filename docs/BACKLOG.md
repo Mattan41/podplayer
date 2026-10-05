@@ -60,6 +60,11 @@ would enable, so it can be prioritised later without re-reading old chats.
 
 - **Migrate `SPRING_DATASOURCE_PASSWORD` to Secret Manager.**
   Already in Step 5 of the roadmap.
+- **`AuthenticationEntryPoint` for a `ProblemDetail` on `401`.** A missing or
+  invalid token is rejected by Spring Security's filter, before MVC's
+  problem-details advice, so `401` has an empty body. The current clients do not
+  read it, so this is cosmetic; it matters if a client ever needs the reason.
+  Documented as an empty body in docs/api/podcasts.md in the meantime.
 
 ## Performance
 

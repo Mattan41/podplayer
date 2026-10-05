@@ -26,10 +26,12 @@ first needs a role-based rule of its own.
 
 - Every response is JSON. A successful write returns the created or updated
   object; there are no `204` responses in this family.
-- Errors use Spring's default problem body (`ProblemDetail`: `type`, `title`,
-  `status`, `detail`, `instance`), raised with `ResponseStatusException`. There
-  is no bespoke error format, and the `detail` field carries the reason a feed
-  could not be read so a client can display it verbatim.
+- Errors use Spring's default problem body (`ProblemDetail`, served as
+  `application/problem+json`), raised with `ResponseStatusException`: `title`,
+  `status`, `detail` and `instance` are present, and `type` is omitted because it
+  is the RFC 9457 default (`about:blank`). There is no bespoke error format, and
+  the `detail` field carries the reason a feed could not be read so a client can
+  display it verbatim.
 - Timestamps are ISO-8601 instants in UTC (`TIMESTAMPTZ` in PostgreSQL,
   `java.time.Instant` in Java).
 - URLs are returned exactly as the feed supplied them; nothing is rewritten or
@@ -61,7 +63,7 @@ is not stored yet, and subscribes the caller to it.
 | `201` | The caller was not subscribed before | `SubscribeResult` |
 | `200` | The caller was already subscribed; the feed was still read, so the podcast and its episodes may have been updated | `SubscribeResult` with `alreadySubscribed: true` |
 | `400` | `feedUrl` is missing, blank, malformed, not `http`/`https`; the URL responded with a 4xx; or the response is not a readable RSS or Atom document (including a document carrying a DOCTYPE) | problem body |
-| `401` | The session has no usable e-mail claim. Not reachable through the normal login flow | problem body |
+| `401` | The session has no usable e-mail claim. Not reachable through the normal login flow | empty body |
 | `502` | The feed host could not be reached, the request timed out, or the host answered with a 5xx | problem body |
 
 ```json
@@ -106,7 +108,7 @@ Lists the podcasts the caller follows.
 | Status | When | Body |
 | --- | --- | --- |
 | `200` | Always, once authenticated | Array of `PodcastSummaryDto`, empty when the caller follows nothing |
-| `401` | The session has no usable e-mail claim | problem body |
+| `401` | The session has no usable e-mail claim | empty body |
 
 ```json
 [
@@ -159,7 +161,7 @@ it.
 | --- | --- | --- |
 | `200` | The caller follows the podcast | `EpisodePageDto`; `episodes` is empty for a podcast with no stored episodes, and for a page past the end |
 | `400` | `id` is not an integer, or `page` is negative | problem body |
-| `401` | The session has no usable e-mail claim | problem body |
+| `401` | The session has no usable e-mail claim | empty body |
 | `403` | The podcast exists but the caller does not follow it | problem body |
 | `404` | No podcast has that id | problem body |
 
@@ -225,7 +227,7 @@ Re-reads the podcast's feed and imports whatever it has that is not stored yet.
 | --- | --- | --- |
 | `200` | The feed was read | `RefreshResult`; `addedEpisodes` is `0` in the normal steady state |
 | `400` | The stored feed URL is unusable, the response is not a feed, or the upstream answered 4xx | problem body |
-| `401` | The session has no usable e-mail claim | problem body |
+| `401` | The session has no usable e-mail claim | empty body |
 | `404` | No podcast has that id | problem body |
 | `502` | The feed host could not be reached, the request timed out, or it answered 5xx | problem body |
 

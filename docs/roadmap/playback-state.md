@@ -10,10 +10,12 @@ including on a different device. No history view, no mark-as-played UI, no
 
 Backend:
 
-- `PlaybackStateRepository` gains the write path: `findByIdUserEmailAndIdEpisodeId`
-  exists, and Phase E adds nothing to the schema. `V2__create_podcast_tables.sql`
-  already carries `playback_state` with `position_seconds`, `played_at` and
-  `completed`.
+- `PlaybackStateRepository` is used as-is; Phase E adds no method to it. The
+  phase covers the work with two operations: read an existing row through the
+  already-present `findByIdUserEmailAndIdEpisodeId`, and write through the
+  inherited `JpaRepository.save()`, in a read-then-mutate upsert. Phase E adds
+  nothing to the schema either: `V2__create_podcast_tables.sql` already carries
+  `playback_state` with `position_seconds`, `played_at` and `completed`.
 - `PlaybackStateController` (or methods on `PodcastController`) with
   `GET /api/playback/{episodeId}` and `PUT /api/playback/{episodeId}`.
   Both require an authenticated caller, both key on the JWT `email` claim

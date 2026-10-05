@@ -31,9 +31,10 @@ Authorization is declared at class level with
 
 - Every response is JSON. A successful write returns the stored object; there
   are no `204` responses in this family.
-- Errors use Spring's default problem body (`ProblemDetail`: `type`, `title`,
-  `status`, `detail`, `instance`), raised with `ResponseStatusException`. There
-  is no bespoke error format.
+- Errors use Spring's default problem body (`ProblemDetail`, served as
+  `application/problem+json`), raised with `ResponseStatusException`: `title`,
+  `status`, `detail` and `instance` are present, and `type` is omitted because it
+  is the RFC 9457 default (`about:blank`). There is no bespoke error format.
 - Timestamps are ISO-8601 instants in UTC (`TIMESTAMPTZ` in PostgreSQL,
   `java.time.Instant` in Java).
 - Bodies sent to these endpoints are DTOs, and every response is a DTO mapped
@@ -60,7 +61,7 @@ Returns the caller's stored position for one episode.
 | Status | When | Body |
 | --- | --- | --- |
 | `200` | A position is stored for the caller and that episode | `PlaybackStateDto` |
-| `401` | The session has no usable e-mail claim. Not reachable through the normal login flow | problem body |
+| `401` | The session has no usable e-mail claim. Not reachable through the normal login flow | empty body |
 | `404` | Nothing is stored yet, so the episode has not been started. This is the normal state for an unplayed episode, not a failure | problem body |
 
 ```json
@@ -112,7 +113,7 @@ The body is a full replacement, not a partial update.
 | --- | --- | --- |
 | `200` | Always, once authenticated and the input is valid. The row was created if it did not exist, and overwritten if it did | `PlaybackStateDto`, the state after the write |
 | `400` | `positionSeconds` is negative | problem body |
-| `401` | The session has no usable e-mail claim | problem body |
+| `401` | The session has no usable e-mail claim | empty body |
 | `404` | No episode has that id | problem body |
 
 ```json

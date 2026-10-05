@@ -33,6 +33,14 @@ spring:
       spec: expireAfterWrite=60s,maximumSize=1000
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  # Render controller-raised ResponseStatusException as an RFC 9457 ProblemDetail
+  # (title, status, detail, instance; `type` is omitted as the RFC 9457 default)
+  # instead of Spring's legacy /error JSON (timestamp, status, error, path). The
+  # frontend reads `detail` (frontend/lib/api/podcast.ts messageFrom); docs/api/*.md
+  # document it.
+  mvc:
+    problemdetails:
+      enabled: true
 server:
   port: 8080
 supabase:

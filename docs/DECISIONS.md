@@ -1164,3 +1164,40 @@ though the rule itself is blanket.
 | --- | --- |
 | Per-file disables | The next `<img>` re-litigates the same decision file by file. |
 | `<Image unoptimized>` | Renders the same `<img>` underneath, and puts a Next-dependent component into a static context for no behaviour change. |
+
+## 34. Error responses are ProblemDetail, not Spring's legacy `/error` JSON
+
+**Context.** The API documents described Spring's `ProblemDetail` (`type`,
+`title`, `status`, `detail`, `instance`) since Phase B, but the backend returned
+Spring's legacy `/error` JSON (`timestamp`, `status`, `error`, `path`). The
+frontend's `messageFrom` reads `body.detail ?? body.title`, so it was reading a
+field that was not present and falling back to a generic message: a bad feed URL
+showed a generic sentence instead of the reason the fetch failed.
+
+**Decision.** Enable `spring.mvc.problemdetails.enabled: true`; do not write a
+`@ControllerAdvice`. Spring's `ProblemDetailsExceptionHandler` maps a
+`ResponseStatusException` onto a `ProblemDetail` and passes the exception's
+reason directly into `detail`, so
+`ResponseStatusException(HttpStatus.BAD_REQUEST, "page must not be negative")`
+becomes `detail: "page must not be negative"` verbatim. A hand-written advice
+would only duplicate that mapping.
+
+**Consequence.** Every error response now has `Content-Type:
+application/problem+json` and the body `{title, status, detail, instance}`.
+`type` is omitted because Spring leaves it null (RFC 9457's `about:blank`
+default) and Jackson drops nulls. Existing clients reading `detail` get the real
+reason for the first time, and no client change was needed. The `401` from the
+security filter is unaffected: it is emitted before MVC's advice, has an empty
+body, and is documented as such.
+
+**Alternatives considered.**
+
+| Option | Why not |
+| --- | --- |
+| A `@ControllerAdvice` returning `ProblemDetail` | Works, but duplicates what Spring already does for `ResponseStatusException`. |
+| Leaving the documents wrong | The status quo: the frontend silently showed generic error text. |
+
+**Cross-reference.** `docs/api/podcasts.md` and `docs/api/playback.md` document
+the shape, including the empty `401`; `docs/BACKLOG.md` tracks putting a
+`ProblemDetail` on that `401`.
+
