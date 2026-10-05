@@ -38,7 +38,7 @@ Step 4 is delivered as six phases. See `docs/roadmap/` for each.
 | B | [Feed ingestion](roadmap/feed-ingestion.md) — **done** | Phase A |
 | C | [Library UI](roadmap/library-ui.md) — **done** | Phase B |
 | D | [Playback engine](roadmap/playback-engine.md) — **in progress** | Phase A (playback state schema), Phase C |
-| E | [Playback state](roadmap/playback-state.md) | Phase D |
+| E | [Playback state](roadmap/playback-state.md) — **done** | Phase D |
 | F | [PWA and Media Session](roadmap/pwa-media-session.md) | Phase E |
 
 ### Phase A — Domain model
@@ -82,6 +82,11 @@ play control on each episode row. `npm run lint` and `npm run build` both exit
 
 ### Phase E — Playback state
 Save and restore playback position. Cross-device resume.
+
+Done. The backend `PlaybackStateController` and its two DTOs
+(`docs/api/playback.md`); `frontend/lib/api/playback.ts`; the `PlaybackSource`
+seam; and the writes and the resume rule in `PlayerProvider`. See
+`DECISIONS.md` entries 35–39.
 
 ### Phase F — PWA and Media Session
 Installable app, lock-screen controls, offline metadata cache. Does not

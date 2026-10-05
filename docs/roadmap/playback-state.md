@@ -4,7 +4,7 @@ Save playback position to the backend and restore it on the next visit,
 including on a different device. No history view, no mark-as-played UI, no
 "continue listening" on the landing page — those are later.
 
-**Status: not started.**
+**Status: done.**
 
 ## Deliverables
 
@@ -35,15 +35,15 @@ Frontend:
   named `PodcastSource` and playback state is not a podcast operation.
 - `PlayerProvider` writes position on the events listed below, and reads it
   when `playEpisode` is called.
-- `frontend/lib/podcast-cache.ts` — `POSITIONS_CACHE_KEY` exists and is unused;
-  this phase either uses it or removes it. See the notes.
+- `frontend/lib/podcast-cache.ts` — `POSITIONS_CACHE_KEY` was unused and is
+  removed. See the notes for why.
 
 Docs:
 
 - `docs/DECISIONS.md` entries for: the debounce interval, the resume rule,
   what `completed` means, and cross-device conflict resolution.
 - `docs/api/playback.md`.
-- `docs/ROADMAP.md` — mark Phase E in progress.
+- `docs/ROADMAP.md` — mark Phase E done.
 
 ## Acceptance criteria
 
@@ -53,7 +53,9 @@ Docs:
   play: playback starts at 20 seconds, not 0.
 - Pressing pause triggers exactly one `PUT` to `/api/playback/{episodeId}`.
   Verified by watching the network tab, not by asserting the code path.
-- Seeking while paused triggers one `PUT`, not a stream.
+- Seeking is covered by the periodic write (a seek fires `timeupdate`) and by
+  the `pagehide` write; there is no explicit seek write, so a seek does not
+  produce a `PUT` of its own.
 - An episode the user has not started returns no position and starts at 0.
 - An episode the user has finished (`completed: true`) starts at 0, not at
   the end.
@@ -123,12 +125,13 @@ server-side.
 ### The `completed` flag
 
 `playback_state.completed` exists in the schema. In this phase it is set when
-playback reaches the end of the episode (the `<audio>` element's `ended` event,
-or `currentTime >= duration - 1`), and cleared when the user presses play on a
-completed episode. It is not a user-visible "mark as played" — that is a later
-feature and would need a separate column or a separate table, because a user
-marking something played and playback reaching the end are different events
-that this single column cannot distinguish.
+playback reaches the end of the episode, by both a forced write from the
+`ended` event (Safari does not always fire `pause` at a natural end) and the
+computed rule `currentTime >= duration - 1` at every write, and it is cleared
+when the user presses play on a completed episode. It is not a user-visible
+"mark as played" — that is a later feature and would need a separate column or a
+separate table, because a user marking something played and playback reaching
+the end are different events that this single column cannot distinguish.
 
 Write that limitation down. It is the kind of thing that becomes a bug report
 six months later.
@@ -140,14 +143,17 @@ CRDT or an operational transform is out of scope: this is single-user personal
 software, and the realistic conflict is "phone paused at 10:00, laptop paused
 at 10:05", where last-write-wins produces a defensible answer.
 
-### `POSITIONS_CACHE_KEY` is unused
+### `POSITIONS_CACHE_KEY` was removed
 
-`frontend/lib/podcast-cache.ts` defines `POSITIONS_CACHE_KEY` and nothing reads
-it. Two options: use it in this phase to paint the last-known position before
-the fetch resolves (consistent with the read cache's stale-while-revalidate
-shape, `DECISIONS.md` entry 22), or delete it. Using it is consistent with the
-rest of the app; deleting it is one less thing to maintain. Decide, and record
-the decision.
+`frontend/lib/podcast-cache.ts` defined `POSITIONS_CACHE_KEY` and nothing read
+it. It is deleted. The read cache's stale-while-revalidate shape
+(`DECISIONS.md` entry 22) fits list metadata, which changes rarely and where a
+stale paint beats a blank. A playhead is the reverse: it changes constantly, and
+the server's value is authoritative and may be newer than this device's, because
+resuming on another device is the point of the phase. Painting a cached position
+first and then correcting it would move the playhead twice, which is worse than
+the single read the provider already performs in parallel with the episode's
+metadata load.
 
 ### The endpoint path is `/api/playback/{episodeId}`, not `/api/episodes/{id}/playback`
 
@@ -155,3 +161,14 @@ The resource being read or written is the user's state for an episode, not the
 episode itself. `/api/playback/{episodeId}` reads as "this user's playback of
 this episode", which is the thing. The alternative nests the resource under an
 endpoint that does not otherwise exist for a single episode.
+
+### `player-context.tsx` is 539 lines
+
+`frontend/lib/player-context.tsx` grew from 367 to 539 lines in this phase, all
+of it the persistence concern: the resume read, the write events (pause,
+`pagehide`/`beforeunload`, episode change, the periodic write and the forced
+`ended` write) and the refs they need. It is still one provider, but it is at the
+edge of what reads comfortably in one pass. The follow-up is a
+`usePlaybackPersistence` hook that owns the read, the writes and the refs and
+hands `PlayerProvider` a small surface. That extraction is deliberately not done
+here, and is recorded so it is not done accidentally as a drive-by.

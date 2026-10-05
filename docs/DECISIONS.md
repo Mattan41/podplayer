@@ -1201,3 +1201,123 @@ body, and is documented as such.
 the shape, including the empty `401`; `docs/BACKLOG.md` tracks putting a
 `ProblemDetail` on that `401`.
 
+## 35. The position write is debounced to 30 seconds, and that is a decision
+
+**Context.** `timeupdate` fires roughly four times a second. Writing on every
+tick would be four database writes a second per active listener, for a number
+that moves a few seconds at a time.
+
+**Decision.** The provider writes on four events instead: on pause; on
+`pagehide` and on `beforeunload`, so a closing tab keeps its place; on episode
+change, before the new episode loads, so the episode being left is stored under
+its own id; and, during playback, at most once every 30 seconds. Thirty is a
+decision, not a measurement: losing 30 seconds of position is cheap, and a write
+every five seconds across the user base is not. No benchmark produced the number.
+
+The pause write is exempt from the interval: a pause is an explicit signal that
+the user is about to leave, so a pause less than 30 seconds after the last
+periodic write still writes. Both paths call the same `writeCurrentPosition`;
+only the periodic path consults the gate. The `ended` write is a fifth trigger
+and belongs to entry 37.
+
+**Consequence.** An unclean shutdown (a crash or a kill) loses up to 30 seconds
+of position. Accepted: pause and `pagehide` cover the ordinary exits, and the
+loss is small enough not to justify more traffic.
+
+**Cross-reference.** `frontend/lib/player-context.tsx` (`PERIODIC_WRITE_MS`, and
+the gate in `handleTimeUpdate`).
+
+## 36. The resume rule is three branches, applied in the client
+
+**Context.** The backend stores a position and a `completed` flag; it does not
+decide where playback starts. The roadmap wanted that written down so a future
+API consumer is not surprised the server does not apply the rule.
+
+**Decision.** When `playEpisode` loads an episode, `getPosition` is read and the
+start position is applied after `loadedmetadata`, because the element ignores
+`currentTime` before then. The rule has three branches and no others: a stored
+position that is not `completed` starts playback at that position, exactly;
+`completed: true` starts at 0; no stored position starts at 0. A position past
+the element's duration is a data error, not a user state, so it starts at 0
+rather than throwing. A read that fails starts at 0 and never refuses to play:
+the read is a convenience, the write is what matters.
+
+There is deliberately no "within N seconds of the end, start over" tail. That
+convention exists in Spotify and Overcast because their primary use is music and
+short-form audio, where a missed ending does not matter. A podcast listener who
+pauses at 58:30 of a 60-minute episode paused there on purpose; restarting at 0
+discards a decision they made. The tail is a one-line change if it ever becomes
+wanted, and adding it later is cheaper than removing it from users who have come
+to rely on exact resume.
+
+**Consequence.** Resume is exact, and the rule lives only in the client. The
+backend stores a number verbatim.
+
+**Cross-reference.** The three branches are asserted, one test each, in
+`frontend/lib/player-context-persistence.test.tsx`.
+
+## 37. `completed` means playback reached the end, not "the user marked it played"
+
+**Decision.** `playback_state.completed` is set when playback reaches the end of
+the episode. The provider writes it explicitly from the `ended` handler with the
+flag forced (`writeCurrentPosition(episode, true)`), because Safari does not
+always fire `pause` at a natural end; every other write also computes it as
+`positionSeconds >= duration - 1`, so a write that observes the end records it
+even without the `ended` event. It is cleared when the user presses play on a
+completed episode: `toggle` seeks to 0 when the position is at or within a second
+of the duration before playing.
+
+**Consequence - the limitation.** A single boolean cannot tell "playback
+finished" from "the user said so". A user-visible mark-as-played /
+mark-as-unplayed is a later feature and needs its own column or table, because
+the two events are genuinely different and this one flag distinguishes neither.
+It is recorded here because it is the kind of thing that becomes a bug report six
+months later.
+
+**Cross-reference.** `frontend/lib/player-context.tsx` (`handleEnded`, `toggle`);
+`docs/roadmap/playback-state.md`.
+
+## 38. Cross-device conflicts resolve last-write-wins
+
+**Context.** Two devices can hold the same episode and both write position. A
+merge would need versioning the backend does not have.
+
+**Decision.** Last write wins: the later `PUT` is the stored state. No CRDT, no
+operational transform. This is single-user personal software, and the realistic
+conflict is "phone paused at 10:00, laptop paused at 10:05", where the later
+write is a defensible answer.
+
+**Consequence.** A device that has been idle can overwrite a newer position from
+another device, and there is no live sync where one device notices another's
+progress while both play. Accepted; live sync is out of scope for the phase.
+
+**Cross-reference.** `docs/api/playback.md`, "Notes for a future client".
+
+## 39. Playback state is a separate source seam from PodcastSource
+
+**Context.** Phase E adds two frontend operations, `getPosition` and
+`savePosition`. `PodcastSource` already exists as the "how do I read podcast
+data" seam, and the roadmap asked whether to extend it or introduce a second
+interface.
+
+**Decision.** A second interface, `PlaybackSource`, with its own context,
+provider and remote object (`frontend/lib/playback-source.tsx`,
+`frontend/lib/playback-source-remote.ts`), mirroring `PodcastSource`.
+`PodcastSource` is read-only list data whose point is that a guest-mode
+`local-source.ts` can implement it from localStorage. Playback state is the
+opposite: per-user, write-mostly, keyed on an episode, and meaningless without a
+signed-in user, so putting it on `PodcastSource` would force every
+implementation, including the guest one, to implement state it cannot. A guest
+source that cannot persist progress simply does not supply a `PlaybackSource`,
+and `usePlaybackSource` defaults to the remote one, so the player works with no
+provider mounted.
+
+**Alternatives considered.**
+
+| Option | Why not |
+| --- | --- |
+| Extend `PodcastSource` | Couples two seams with different consumers, lifetimes and implementability, and hands the planned guest source a contract it cannot honour. |
+
+**Cross-reference.** Entry 22 made the same kind of seam choice for the read
+cache and `PodcastSource`; this entry follows it.
+

@@ -16,7 +16,6 @@
  */
 
 export const SUBSCRIPTIONS_CACHE_KEY = "podplayer.cache.subscriptions";
-export const POSITIONS_CACHE_KEY = "podplayer.cache.positions";
 
 /**
  * @param podcastId the podcast whose episode list is cached

@@ -159,9 +159,10 @@ reasoning lives in `docs/roadmap/playback-state.md` and, once the client lands,
 
 - **Writes are debounced on the client.** `timeupdate` fires roughly four times
   per second; writing on every tick would be four database writes per second per
-  listener. The client is expected to write on pause, on `beforeunload` and
-  `pagehide`, on episode change, and otherwise at most every 30 seconds. The
-  server accepts whatever it is sent and has no rate limit of its own.
+  listener. The client writes on pause, on `beforeunload` and `pagehide`, on
+  episode change, once with `completed: true` when the episode ends, and
+  otherwise at most every 30 seconds. The server accepts whatever it is sent and
+  has no rate limit of its own.
 - **The resume rule is a client rule.** On restoring an episode: if `completed`
   is `true`, start at 0; otherwise start at the stored `positionSeconds`,
   exactly. There is intentionally no "within N seconds of the end, start over"

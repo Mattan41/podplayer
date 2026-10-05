@@ -128,6 +128,19 @@ Currently approved:
 | `tailwindcss` + PostCSS plugin | Scaffolding | Styling. |
 | `@radix-ui/react-slider`, `@radix-ui/react-dialog` | Phase D | Headless Slider and Dialog for the player scrubber and the full player. Deliberately these two only; adding another primitive is a new `DECISIONS.md` entry. |
 
+Dev-only, added in Phase E for the test harness. These are not shipped and have
+no runtime or user-visible surface, so they are a lighter commitment than the
+runtime dependencies above, which is why they are recorded here rather than each
+needing its own `DECISIONS.md` entry:
+
+| Dependency | Approved in | Purpose |
+| --- | --- | --- |
+| `vitest` | Phase E | Test runner (`npm test`). Dev-only. |
+| `@testing-library/react` | Phase E | Renders components in tests. Dev-only. |
+| `@testing-library/jest-dom` | Phase E | DOM matchers for Vitest's `expect`. Dev-only. |
+| `jsdom` | Phase E | The DOM environment for Vitest. Dev-only. |
+| `@vitejs/plugin-react` | Phase E | JSX transform for Vitest. Dev-only. |
+
 Not approved, and the reason:
 
 | Dependency | Reason |
@@ -137,9 +150,12 @@ Not approved, and the reason:
 | Any state library (Zustand, Redux, Jotai) | Still not needed. React Context is sufficient for auth state, and `useReducer` + Context carries playback as of Phase D (`DECISIONS.md` entry 29). Revisit in Phase E only if persistence makes the reducer hard to follow. |
 | Any audio library | Not needed. The platform media element plus the player context covers Phase D; nothing here warrants a wrapper. |
 
-A new dependency requires an entry in `DECISIONS.md` before it is added.
+A new runtime dependency requires an entry in `DECISIONS.md` before it is added.
 The entry must state the problem, the alternatives considered, and the
-cost of the choice.
+cost of the choice. A devDependency has no runtime or user-visible surface and
+is a lighter commitment; it is added to the dev-only table above and does not
+need its own entry. (The Phase E test harness arrived without an entry under the
+old rule, which is what prompted that distinction.)
 
 ---
 
@@ -231,6 +247,10 @@ Three ways to load them:
   to read `backend/.env`. Works for the green play button and does not
   affect the terminal.
 - **Manual export.** `set -a; source .env; set +a` before `./mvnw`.
+
+If `direnv allow` has not been run for `backend/`, direnv does not load the file:
+it prints a prompt for the decision instead, and the variables stay unset until
+one of the three methods above is used.
 
 CI never hits this: GitHub Actions passes the values as workflow `env:`
 entries, and Cloud Run receives them as service configuration.
