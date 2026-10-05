@@ -90,6 +90,8 @@ events instead:
 - On `beforeunload` and on `pagehide`, so a closed tab keeps its place.
 - On episode change, before the new episode loads.
 - During playback, at most every 30 seconds.
+- On `ended`, writing `completed: true` explicitly, because Safari does not
+  always fire `pause` at a natural end. See `DECISIONS.md` entry 37.
 
 Thirty is chosen because the cost of losing 30 seconds of position is small,
 and the cost of a write every five seconds across the user base is not. It is

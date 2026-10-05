@@ -35,6 +35,7 @@ result.
 | `npm run dev` | Start the development server. |
 | `npm run build` | Produce the static export in `out/`. |
 | `npm run lint` | Run ESLint. Enforced in CI; see `docs/DECISIONS.md` entry 12. |
+| `npm test` | Run the Vitest unit tests. |
 
 ## Environment variables
 

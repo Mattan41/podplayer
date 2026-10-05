@@ -7,10 +7,11 @@ import { PlayerProvider, usePlayer, type PlayerContextValue } from "@/lib/player
 import { PlaybackSourceProvider, type PlaybackSource } from "@/lib/playback-source";
 
 /*
- * Phase E: the provider persists position on four events and restores it when an
- * episode starts. The provider is driven through `usePlayer` and a fake `<audio>`
- * element attached to the shared `audioRef`; a mocked `PlaybackSource` stands in
- * for the network, so no request is made and the captured writes are exact.
+ * Phase E: the provider persists position on its write events and restores it
+ * when an episode starts. The provider is driven through `usePlayer` and a
+ * fake `<audio>` element attached to the shared `audioRef`; a mocked
+ * `PlaybackSource` stands in for the network, so no request is made and the
+ * captured writes are exact.
  */
 afterEach(() => {
   cleanup();
