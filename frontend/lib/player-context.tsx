@@ -170,6 +170,12 @@ function describePlayFailure(error: unknown): string {
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  /*
+   * Mirrors `state.isFullPlayerOpen` for the `popstate` listener, which is
+   * registered once and cannot close over a fresh value. See `setFullPlayerOpen`
+   * and the history effect below.
+   */
+  const isFullPlayerOpenRef = useRef(false);
 
   const { episode } = state;
 
@@ -183,6 +189,48 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "error", message: describePlayFailure(error) });
     });
   }, [episode]);
+
+  /*
+   * Back closes the full player, through the history API rather than a route.
+   *
+   * Dismissing an open modal with the system back control is a platform
+   * expectation; the full player stays a Dialog (docs/DECISIONS.md entry 27) and
+   * gains no route. Opening pushes one entry (see `setFullPlayerOpen`); backing
+   * into it fires `popstate`, which closes the dialog here. The listener only
+   * ever closes — it never calls `history.back()` — so a back that dismisses the
+   * player cannot pop a second entry. That is the double-close guard.
+   */
+  useEffect(() => {
+    const handlePopState = () => {
+      if (!isFullPlayerOpenRef.current) {
+        return;
+      }
+      isFullPlayerOpenRef.current = false;
+      dispatch({ type: "full", open: false });
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  /*
+   * Keeps the pushed entry honest when the player closes for a reason other than
+   * back, Escape or the Close button — `stop`, or the media element erroring and
+   * dropping the episode. Those dispatch a closed state directly, so the ref is
+   * still `true`; popping the entry here cleans up history, and the `popstate` it
+   * causes is ignored because the ref is already `false`. When the close came
+   * through `popstate` the ref is `false`, so this effect is a no-op.
+   */
+  useEffect(() => {
+    if (state.isFullPlayerOpen) {
+      isFullPlayerOpenRef.current = true;
+      return;
+    }
+    if (!isFullPlayerOpenRef.current) {
+      return;
+    }
+    isFullPlayerOpenRef.current = false;
+    window.history.back();
+  }, [state.isFullPlayerOpen]);
 
   const toggle = useCallback(() => {
     const audio = audioRef.current;
@@ -228,8 +276,29 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "stop" });
   }, []);
 
+  /**
+   * Opens the full player, or asks history to close it.
+   *
+   * Opening pushes one entry so the back control has something to pop, and is the
+   * only place the `full` action is dispatched with `true`. Closing does not
+   * dispatch directly: it calls `history.back()`, and the `popstate` listener
+   * above is the single writer of the closed state. Escape and the Close button
+   * both arrive here, so they clean up the entry the same way back does.
+   */
   const setFullPlayerOpen = useCallback((open: boolean) => {
-    dispatch({ type: "full", open });
+    if (open) {
+      if (isFullPlayerOpenRef.current) {
+        return;
+      }
+      isFullPlayerOpenRef.current = true;
+      window.history.pushState({ player: true }, "");
+      dispatch({ type: "full", open: true });
+      return;
+    }
+    if (!isFullPlayerOpenRef.current) {
+      return;
+    }
+    window.history.back();
   }, []);
 
   const handleLoadedMetadata = useCallback(() => {

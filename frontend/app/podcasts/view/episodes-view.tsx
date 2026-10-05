@@ -106,15 +106,6 @@ export default function EpisodesView() {
   const source = usePodcastSource();
   const { state, playEpisode } = usePlayer();
 
-  /*
-   * The player surface is a fixed bar at the bottom of the viewport, so when it
-   * is up the page reserves its height and the "Load more" button is never
-   * covered. `pb-24` (96px) is chosen over the bar's measured 81px to leave a
-   * small gap; see the fix report, item 1. The error notice is the same fixed
-   * bar, so it counts too.
-   */
-  const hasPlayerBar = state.episode !== null || state.error !== null;
-
   const [episodes, setEpisodes] = useState<EpisodeDto[]>([]);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
@@ -325,7 +316,7 @@ export default function EpisodesView() {
   }
 
   return (
-    <main className={`flex flex-1 flex-col gap-8 p-8 ${hasPlayerBar ? "pb-24" : ""}`}>
+    <main className="flex flex-1 flex-col gap-8 p-8">
       {podcast ? (
         /*
          * The podcast's own identity, matching the thumbnail the library list

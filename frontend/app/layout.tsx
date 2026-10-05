@@ -4,6 +4,7 @@ import Header from "./header";
 import WakingNotice from "./waking-notice";
 import AudioElement from "@/components/player/audio-element";
 import MiniPlayer from "@/components/player/mini-player";
+import PlayerAwareMain from "./player-aware-main";
 import { AuthProvider } from "@/lib/auth-context";
 import { PlayerProvider } from "@/lib/player-context";
 import { PodcastSourceProvider } from "@/lib/podcast-source";
@@ -59,7 +60,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <PlayerProvider>
                 <Header />
                 <WakingNotice />
-                {children}
+                {/* Page content only: the wrapper reserves room for the fixed
+                    player bar, and the header is deliberately outside it. */}
+                <PlayerAwareMain>{children}</PlayerAwareMain>
                 {/*
                   The single media element and the player surface live here, in
                   the layout, so a route change cannot unmount them and stop

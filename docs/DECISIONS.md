@@ -1080,3 +1080,36 @@ of `EpisodeDto`.
 anticipate offline playback. Rejected: it is a shape for a phase that does not exist, and
 ARCHITECTURE §5 rule 8 ("Contract First") prefers one type that mirrors the backend until
 a real second source appears.
+
+## 31. Back closes the full player through the history API
+
+**Context.** Entry 27 chose a Dialog over a route for the full player, and did not
+consider the back control. On mobile, back dismissing an open modal is a platform
+expectation; on desktop, back is browser navigation. The two conflict, and the dialog
+honoured neither — it ignored back entirely.
+
+**Decision.** Bind the dialog's open state to a single `pushState`/`popstate` pair, so back
+closes it without the player becoming a route. `PlayerProvider` pushes one entry
+(`history.pushState({ player: true }, "")`) when the dialog opens and pops it when it
+closes. The `popstate` listener is the single writer of the closed state, so Escape and the
+Close button route through `history.back()` and clean up the same entry that back pops; a
+close that arrives any other way — `stop`, or the audio element erroring and dropping the
+episode — pops the entry from an effect.
+
+**Consequence.** Back closes the dialog on every platform, including desktop.
+Distinguishing them would require device sniffing, which is unreliable and not attempted. A
+desktop user who expects back to navigate will instead close the player and press back
+again. Accepted. The pushed entry carries the current URL, so the App Router sees no
+navigation and the page does not change.
+
+**Alternatives considered.**
+
+| Option | Why not |
+| --- | --- |
+| A route-based player | Already rejected in entry 27, and it would unmount the tree the mini player lives in. |
+| `beforeunload` | The wrong tool for SPA navigation: it does not fire for `history` changes, and it would prompt on real unloads. |
+| Device sniffing | Unreliable, and it couples the behaviour to a user-agent guess. |
+| Do nothing | Leaves the mobile expectation unmet — the bug the D.5 pass fixes. |
+
+**Cross-reference entry 27.** That entry stands and this one extends it; it does not
+supersede it. The player is still a Dialog, and this entry only adds the back binding.

@@ -13,6 +13,18 @@ would enable, so it can be prioritised later without re-reading old chats.
 - **Sleep timer.** Common for bedtime listening. Stops playback after N
   minutes or at end of episode. UI-only, no backend.
 
+## Player
+
+- **Render episode descriptions as formatted text.** Feed descriptions carry
+  HTML (`<p>`, `<br>`, links), but the full player shows the raw markup as
+  escaped text, so the tags are visible. Two options, neither chosen: sanitise
+  on the client (a sanitiser dependency, plus a policy for what is allowed), or
+  strip the markup in the backend at ingest (loses links and changes the API
+  contract). This is a decision, not a fix.
+- **Swipe navigation in the full player.** Right for programme notes, left for
+  the queue. Needs a gesture design, a transition model, and a decision about
+  where the "views" live. Not scheduled.
+
 ## Library
 
 - **OPML import/export.** Standard interchange format between podcast apps.

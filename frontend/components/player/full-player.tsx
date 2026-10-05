@@ -10,7 +10,14 @@ import Scrubber from "./scrubber";
  * It is a dialog rather than a route because it opens over whatever the user is
  * already looking at, and a route change would unmount the tree the mini player
  * lives in. Radix supplies the focus trap and Escape close. See
- * docs/DECISIONS.md entry 27.
+ * docs/DECISIONS.md entry 27 — that decision stands: the player is not a route.
+ *
+ * Back also closes it. Dismissing an open modal with the system back control is
+ * a platform expectation on mobile, and the history API satisfies it without a
+ * route: `PlayerProvider` pushes one entry when this dialog opens and pops it
+ * when the dialog closes (back itself, or Escape / Close, which route through
+ * `history.back()`). Back stays browser navigation everywhere else, because the
+ * pushed entry carries the current URL and the App Router sees no navigation.
  *
  * Rendered by `MiniPlayer`, which is the player surface the layout mounts, so
  * `layout.tsx` gains exactly one player mount point.
