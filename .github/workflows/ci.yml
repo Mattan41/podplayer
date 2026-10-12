@@ -1,0 +1,97 @@
+name: CI
+
+# Pull requests only: the deploy workflows already run on push to main, so this
+# validates a change before it merges. Dependabot pull requests run here too,
+# which is why no step uses a repository secret.
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build static site
+        run: npm run build
+        env:
+          # Placeholders only: the export needs the variables present and
+          # well-formed, not real values (vitest.setup.ts uses the same ones).
+          # No repository secret is referenced, so a Dependabot pull request,
+          # which has no access to Actions secrets, can still build.
+          NEXT_PUBLIC_API_URL: http://localhost:8080
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost/supabase
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: test-anon-key
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    # The suite is not database-free: PlaybackStatePersistenceTest is a
+    # @DataJpaTest with Replace.NONE, and BackendApplicationTests loads the full
+    # context, so both need a PostgreSQL. Flyway migrates the empty database on
+    # startup and ddl-auto: validate then checks the entities against it.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: podplayer
+          POSTGRES_USER: podplayer
+          POSTGRES_PASSWORD: podplayer
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U podplayer"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/podplayer
+      SPRING_DATASOURCE_USERNAME: podplayer
+      SPRING_DATASOURCE_PASSWORD: podplayer
+      # Never fetched at context load; the decoder resolves JWKS lazily.
+      SUPABASE_JWKS_URI: http://localhost/jwks
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Setup Java
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+          cache: 'maven'
+          cache-dependency-path: backend/pom.xml
+
+      - name: Test
+        run: ./mvnw -B test
