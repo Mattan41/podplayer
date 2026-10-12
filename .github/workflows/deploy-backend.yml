@@ -28,13 +28,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+        # Pinned to a full commit SHA: a floating tag can be moved, a SHA
+        # cannot. Bump via a new SHA and update the version comment.
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        # Pinned to a full commit SHA, for the same reason as the step above.
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
 
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet

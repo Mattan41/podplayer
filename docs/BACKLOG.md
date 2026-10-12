@@ -94,3 +94,7 @@ Two tiers. Not scheduled; after Phase D at the earliest.
 Both require a `local-source.ts` implementation of `PodcastSource`.
 The interface exists in `frontend/lib/podcast-source.ts` so neither
 tier requires rewriting consumers.
+
+
+- View for "playing now" (list of episodes you have started listening to)
+- view with latest episodes (30 latest maybe in total? - or a few per episode + max limit? )
