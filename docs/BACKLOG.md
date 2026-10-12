@@ -96,5 +96,8 @@ The interface exists in `frontend/lib/podcast-source.ts` so neither
 tier requires rewriting consumers.
 
 
+- marked pllayed (there is probably somthing for this - in other pdocast icon changes for some podcasts)
 - View for "playing now" (list of episodes you have started listening to)
-- view with latest episodes (30 latest maybe in total? - or a few per episode + max limit? )
+- view with latest episodes - 30 latest maybe in total? - or a few per episode
+- spola fram/tillbaka 15 sekunder
+- play next queue and view 

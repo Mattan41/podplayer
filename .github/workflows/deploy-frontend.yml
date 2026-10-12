@@ -8,10 +8,11 @@ on:
       - '.github/workflows/deploy-frontend.yml'
   workflow_dispatch:
 
+# Least privilege: the workflow as a whole only reads the repository. Write
+# permissions are granted on the job that actually needs them (SonarQube S8233:
+# "Write permissions should be defined at the job level").
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: "pages"
@@ -62,6 +63,11 @@ jobs:
           path: frontend/out
 
   deploy:
+    # actions/deploy-pages needs these two; scoping them to this job keeps the
+    # build job read-only (SonarQube S8233).
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
