@@ -5,9 +5,9 @@
 --
 -- Run this ONCE per project, AFTER the backend has started successfully at
 -- least one time. The backend runs Flyway on startup, which applies
--- V1__create_allowed_users.sql and V2__create_podcast_tables.sql. Those
--- migrations create the tables. This file covers the two steps that Flyway
--- must not do:
+-- V1__create_allowed_users.sql, V2__create_podcast_tables.sql and
+-- V3__drop_counter_table.sql. Those migrations create the tables. This file
+-- covers the two steps that Flyway must not do:
 --
 --   1. Row Level Security. Supabase exposes the public schema through
 --      PostgREST, and the anon key is shipped to every browser. Without
@@ -29,17 +29,15 @@
 -- 1. Enable Row Level Security
 -- =============================================================================
 --
--- Seven tables are in the public schema. allowed_users and the four
+-- Six tables are in the public schema. allowed_users and the four
 -- podcast tables (podcast, episode, subscription, playback_state) are
--- created by Flyway migrations V1 and V2. counter pre-existed and is
--- absorbed by spring.flyway.baseline-on-migrate. flyway_schema_history
--- is Flyway's own bookkeeping table.
+-- created by Flyway migrations V1 and V2. flyway_schema_history is
+-- Flyway's own bookkeeping table.
 --
 -- The backend connects over JDBC as the postgres role, which bypasses
 -- RLS. The deny-all policy below therefore does not affect it.
 
 ALTER TABLE allowed_users         ENABLE ROW LEVEL SECURITY;
-ALTER TABLE counter               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE flyway_schema_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE podcast               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE episode               ENABLE ROW LEVEL SECURITY;
@@ -56,9 +54,6 @@ ALTER TABLE playback_state        ENABLE ROW LEVEL SECURITY;
 -- write any of these tables.
 
 CREATE POLICY "Deny anon access" ON allowed_users
-    FOR ALL TO anon, authenticated USING (false) WITH CHECK (false);
-
-CREATE POLICY "Deny anon access" ON counter
     FOR ALL TO anon, authenticated USING (false) WITH CHECK (false);
 
 CREATE POLICY "Deny anon access" ON flyway_schema_history
@@ -99,14 +94,13 @@ CREATE POLICY "Deny anon access" ON playback_state
 -- 4. Verify
 -- =============================================================================
 --
--- All seven tables must report relrowsecurity = t.
+-- All six tables must report relrowsecurity = t.
 
 SELECT n.nspname AS schema, c.relname, c.relrowsecurity
 FROM pg_class c
 JOIN pg_namespace n ON n.oid = c.relnamespace
 WHERE c.relname IN (
         'allowed_users',
-        'counter',
         'flyway_schema_history',
         'podcast',
         'episode',

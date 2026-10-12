@@ -1485,3 +1485,60 @@ mode, which is a later refinement, not part of this phase.
 **Cross-reference.** `frontend/app/manifest.ts`, `frontend/app/layout.tsx`,
 `docs/STYLEGUIDE.md` §9.
 
+
+## 46. The counter is removed, not migrated
+
+**Context.** CI's backend job runs against a fresh PostgreSQL, and it failed at
+context load with `Schema-validation: missing table [counter]`. No Flyway
+migration creates the counter table: it predated Flyway and was absorbed on the
+live database by `baseline-on-migrate` / `baseline-version: 0`, which is what
+the `NOTE ON BASELINING` in `V1__create_allowed_users.sql` records. Local runs
+hid the gap, because `backend/.env` points at the live database where the table
+exists. Entry 21 retired the counter's frontend and left the backend in place,
+calling the removal "a separate change".
+
+**Decision.** Remove it. `CounterController`, the `Counter` entity and
+`CounterRepository` are deleted, and `V3__drop_counter_table.sql` drops the
+table with `DROP TABLE IF EXISTS`. `V1` is deliberately not edited: Flyway
+validates the checksums of already-applied migrations, so changing even a
+comment there would make the live database refuse to start with a checksum
+mismatch.
+
+**Consequence.** A fresh database is now reproducible from the migrations alone
+(V1, V2, V3), and the backend suite no longer validates an entity against a
+table it never created. `/api/counter` stops existing. The `.clinerules` rule
+that said never to truncate the counter row is deleted, because the table no
+longer exists. `infra/db-bootstrap.sql` and `infra/secrets.md` drop `counter`
+from the RLS list, so six tables remain. On the live database the table is
+dropped the first time the backend starts after this change.
+
+**Alternatives considered.** Add a `V3__create_counter_table.sql` with
+`CREATE TABLE IF NOT EXISTS`, which would also fix CI with a smaller diff.
+Rejected because it keeps a dead feature alive and preserves a special-case
+rule for a table whose only purpose was a walking-skeleton health check that
+`/health` already covers.
+
+## 47. `cors.allowed-origins` is a top-level key
+
+**Context.** Adding the CI backend job surfaced a second failure behind the
+missing `counter` table: `Error creating bean with name 'corsConfig' ... Could
+not resolve placeholder 'cors.allowed-origins'`. `CorsConfig` reads
+`${cors.allowed-origins}`, but `application.yaml` declared the value under
+`spring:` as `spring.cors.allowed-origins`, which Spring Boot has no meaning for
+and nothing reads. The suite passed locally only because `backend/.env` exports
+`CORS_ALLOWED_ORIGINS`, and Spring's relaxed binding maps that environment
+variable onto `cors.allowed-origins`; the CI job does not set it.
+
+**Decision.** Declare the value as a top-level `cors:` block with the same
+default (`http://localhost:3000`), so the file defines the key the code reads.
+
+**Consequence.** A fresh checkout runs `./mvnw test` with no CORS environment
+variable, which is what lets the CI backend job stay secret-free. Setting
+`CORS_ALLOWED_ORIGINS` still overrides the default, and production is unaffected
+because Cloud Run sets it. `PlaybackStateControllerTest` keeps its
+`@TestPropertySource` override.
+
+**Cross-reference.** `backend/src/main/resources/application.yaml`,
+`backend/src/main/java/org/kruskopf/podplayer/backend/config/CorsConfig.java`.
+
+

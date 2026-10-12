@@ -60,8 +60,6 @@ view were all observed on the deployed site. Phase D is next.
 - Playback.
 - RSS discovery (searching by name).
 - OPML import/export.
-- The backend counter feature. C.5 removed only its frontend page
-  (`DECISIONS.md` entry 21); the controller, entity and table remain.
 
 ## Notes
 
