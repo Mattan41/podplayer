@@ -1,0 +1,88 @@
+# Dependabot configuration.
+#
+# Four ecosystems, one per thing the repo actually depends on. Each keeps
+# minor and patch bumps in a single weekly PR and leaves major bumps as their
+# own PR, so breaking changes are never batched with routine updates.
+# open-pull-requests-limit caps version-update PRs; security updates ignore
+# both the schedule and the limit and open immediately.
+version: 2
+updates:
+  # Pinned GitHub Actions. Dependabot rewrites the commit SHA and its trailing
+  # "# vX.Y.Z" comment together, so the pins stay readable and the rule in
+  # .clinerules stays satisfiable.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Stockholm"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    groups:
+      actions-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # Frontend: Next.js, React, Radix, Supabase and the dev toolchain.
+  # The lockfile is frontend/package-lock.json, so the directory is /frontend.
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Stockholm"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # Backend Java dependencies: the Spring Boot parent and the libraries the
+  # BOM does not manage (Rome, Flyway, Caffeine, the PostgreSQL driver).
+  - package-ecosystem: "maven"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Stockholm"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      maven-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # Backend container base images (maven, eclipse-temurin).
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Stockholm"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      docker-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]

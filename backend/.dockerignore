@@ -1,9 +1,20 @@
+# Build output and the Maven wrapper
 target/
 .mvn/
 mvnw
 mvnw.cmd
+
+# Local secrets and environment files: never sent to the build context
 .env
 .env.*
+.envrc
+env.yaml
+
+# Documentation and IDE files
 *.md
 .idea/
 *.iml
+
+# The build definition is read by the daemon directly, not from the context
+Dockerfile
+.dockerignore
