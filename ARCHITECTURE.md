@@ -16,7 +16,7 @@ A web-based podcast player focused on a disciplined, clean user experience with 
 
 ### Backend
 - **Framework:** Java 25, Spring Boot 4.x (Web MVC, Data JPA, PostgreSQL Driver)
-- **Deployment:** Containerized (`backend/dockerfile`) hosted on Google Cloud Run
+- **Deployment:** Containerized (`backend/Dockerfile`) hosted on Google Cloud Run
 - **Domain:** `podplayer-api.kruskopf.org` (Cloudflare CNAME pointing to `ghs.googlehosted.com`, DNS-only / gray cloud)
 - **CORS:** Allowed origins configured via the `CORS_ALLOWED_ORIGINS` environment variable. Never hardcoded in source.
 
