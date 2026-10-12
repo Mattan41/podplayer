@@ -43,6 +43,25 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+/**
+ * Stores a copy of a fetched response in the shell cache.
+ *
+ * Fire-and-forget on purpose: the response is returned to the page whether or
+ * not the write lands, so the promise is not awaited. `void` marks the ignored
+ * promise explicitly and `.catch` keeps a failed write (a full quota, say) from
+ * surfacing as an unhandled rejection. See docs/DECISIONS.md entry 43.
+ *
+ * @param {Request} request the request whose response is cached under its URL
+ * @param {Response} response the response to store; a copy is taken first
+ */
+function putInCache(request, response) {
+  const copy = response.clone();
+  void caches
+    .open(CACHE_NAME)
+    .then((cache) => cache.put(request, copy))
+    .catch(() => {});
+}
+
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (request.method !== "GET") {
@@ -62,8 +81,7 @@ self.addEventListener("fetch", (event) => {
           cached ||
           fetch(request)
             .then((response) => {
-              const copy = response.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+              putInCache(request, response);
               return response;
             })
             .catch(() => caches.match("/index.html")),
@@ -79,8 +97,7 @@ self.addEventListener("fetch", (event) => {
         cached ||
         fetch(request).then((response) => {
           if (response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+            putInCache(request, response);
           }
           return response;
         }),
