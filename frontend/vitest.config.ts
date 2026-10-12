@@ -27,6 +27,8 @@ export default defineConfig({
     // cleanup needs; test files still import describe/it/expect explicitly.
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
-    include: ["lib/**/*.test.{ts,tsx}"],
+    // `app/` is included for the pure metadata route (the web app manifest);
+    // the components and providers that hold logic live under `lib/`.
+    include: ["lib/**/*.test.{ts,tsx}", "app/**/*.test.{ts,tsx}"],
   },
 });

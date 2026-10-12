@@ -12,6 +12,7 @@ import {
   type RefObject,
 } from "react";
 import type { EpisodeDto } from "@/lib/api/podcast";
+import { useMediaSession } from "@/lib/media-session";
 import { usePlaybackSource } from "@/lib/playback-source";
 
 /**
@@ -494,6 +495,48 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     () => dispatch({ type: "error", message: AUDIO_ERROR_MESSAGE }),
     [],
   );
+
+  /*
+   * Media Session: the OS media controls (lock screen, notification shade,
+   * headphone buttons) drive the same element. The callbacks are stable so the
+   * action handlers are registered once; `mediaSeekRelative` reads the
+   * element's own position, so it needs no state. See docs/DECISIONS.md
+   * entry 44.
+   */
+  const mediaPlay = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.play().catch((error: unknown) => {
+        dispatch({ type: "error", message: describePlayFailure(error) });
+      });
+    }
+  }, []);
+
+  const mediaPause = useCallback(() => {
+    audioRef.current?.pause();
+  }, []);
+
+  const mediaSeekRelative = useCallback(
+    (deltaSeconds: number) => {
+      const audio = audioRef.current;
+      if (!audio || !Number.isFinite(audio.duration) || audio.duration <= 0) {
+        return;
+      }
+      const next = Math.min(Math.max(audio.currentTime + deltaSeconds, 0), audio.duration);
+      seek(next);
+    },
+    [seek],
+  );
+
+  useMediaSession({
+    title: episode?.title ?? null,
+    artwork: episode?.imageUrl ?? null,
+    currentTime: state.currentTime,
+    duration: state.duration,
+    play: mediaPlay,
+    pause: mediaPause,
+    seekRelative: mediaSeekRelative,
+  });
 
   const value = useMemo<PlayerContextValue>(
     () => ({

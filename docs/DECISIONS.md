@@ -1363,3 +1363,125 @@ site keeps serving the last commit that passed. Same trade as entry 12.
 
 **Cross-reference.** Entry 12 (the lint step, same mechanism).
 
+## 42. The service worker is hand-written, not `next-pwa` or `serwist`
+
+**Context.** `docs/roadmap/pwa-media-session.md` left the choice open: add a
+maintained library (`next-pwa` or `serwist`) or write a small worker by hand.
+The phase's requirement is narrow — cache the app shell so an installed app
+opens without a network round trip — and its risk is that a worker sits between
+the app and the network for every subsequent deploy.
+
+**Decision.** A hand-written worker, `frontend/public/sw.js`, with no
+dependency. Registration is a small helper (`frontend/lib/service-worker.ts`)
+called from a client component (`frontend/app/service-worker-register.tsx`)
+mounted in `layout.tsx`, and only when `process.env.NODE_ENV === "production"`.
+
+**Consequence.** Nothing is added to `package.json` and no build step is
+introduced. The cost is that the worker is ours to keep correct: there is no
+framework to generate a precache list from Next's hashed output, so the shell is
+cached at runtime and only the fixed URLs are precached. That is enough for the
+phase, and it is the shape that fails smallest. The worker is served from the
+site root (`/sw.js`), so its scope covers the origin; `next.config.ts` sets
+`basePath` from `BASE_PATH`, which the deploy workflow leaves unset because the
+site is served at the domain root. A `basePath` would require both the
+registration path and the precached URLs to be prefixed — that is the note a
+future change to `BASE_PATH` has to read.
+
+**Alternatives considered.**
+
+| Option | Why not |
+| --- | --- |
+| `serwist` | Maintained and Workbox-based, and it generates a precache manifest from the build — more than this phase needs, for one route set and no offline audio. |
+| `next-pwa` | Older and less actively maintained; the config surface is larger than the behaviour it buys here. |
+| No worker | The install prompt works without one, but the offline cold-open criterion does not. |
+
+**Cross-reference.** Entry 43 (the cache strategy), entry 1 (the same "defer the
+dependency until a measured need exists" pattern).
+
+## 43. The service worker caches the app shell only, under a versioned name
+
+**Context.** A cache strategy decides the failure modes of every later deploy.
+The two risks are stale HTML after a shape change and a worker that caches
+responses it should not (API data, playback state).
+
+**Decision.** `frontend/public/sw.js` handles same-origin `GET` requests only.
+Cross-origin requests — the backend API and Supabase — are returned untouched,
+so feed reads and playback-state writes always reach the network. Navigations
+are cache-first, falling back to the network and then to the cached
+`/index.html`; static assets are cache-first and populated on first use. The
+cache is named `podplayer-shell-v1` and `CACHE_NAME` is bumped on every release:
+the `activate` handler deletes every cache whose name is not the current one, so
+a deploy evicts the previous shell. A release that breaks the precache fails to
+install, which leaves the previous, working worker in place rather than
+replacing it with a broken one.
+
+**Consequence.** After a deploy the first visit rebuilds the shell. Between
+releases the shell is served from cache, so a cold open paints before the
+network answers. The staleness window is a release: the button the phase
+promises is the version bump, observed by the update the browser performs.
+
+**Alternatives considered.**
+
+| Option | Why not |
+| --- | --- |
+| Network-first for navigations | Fails the "paints before the network answers" criterion, which is the point of the worker. |
+| Cache API responses too | Playback state is per-user and must not be served stale; the phase leaves API calls alone. |
+| A stable cache name | Never evicts, so a changed page shape serves stale HTML forever. |
+
+**Cross-reference.** Entry 42 (the worker itself), `docs/roadmap/pwa-media-session.md`.
+
+## 44. Media Session artwork is the feed URL, fetched by the OS
+
+**Context.** `MediaMetadata({ artwork })` is how the lock screen gets its image.
+The source could be the episode's feed artwork URL, or a backend proxy, or a
+bundled placeholder. Entry 33 turns off `next/image` for in-page artwork because
+every image is third-party and no optimizer exists under `output: 'export'`; a
+Media Session image is a different path, fetched by the OS rather than the page.
+
+**Decision.** The artwork is `episode.imageUrl`, passed to
+`MediaMetadata({ artwork: [{ src }] })` unchanged. No proxy, no placeholder. The
+seek controls use a fifteen-second step (`MEDIA_SESSION_SEEK_STEP_SECONDS`),
+matching the Android and iOS podcast default, and are clamped to the episode by
+the provider before calling `seek`.
+
+**Consequence — the caveat.** The lock-screen fetch is made by the OS with
+different CORS and cache behaviour than the page's own fetch, so an artwork URL
+that renders in the full player may fail on the lock screen. That is a
+device-dependent outcome the phase accepts and verifies on a real device rather
+than in DevTools. If it turns out to be a problem in practice, a proxying
+endpoint or a same-origin placeholder is the follow-up, and that is a new entry.
+
+**Alternatives considered.**
+
+| Option | Why not |
+| --- | --- |
+| A backend image proxy | Removes the CORS question but adds an endpoint and traffic for a decoration. |
+| A bundled placeholder | Shows a generic image where the feed has real artwork. |
+
+**Cross-reference.** Entry 33 (the in-page `<img>` exemption),
+`docs/roadmap/pwa-media-session.md`.
+
+## 45. The manifest and viewport colours are literal hex
+
+**Context.** `ARCHITECTURE.md` §5 rule 1 and `docs/STYLEGUIDE.md` §9 forbid hex
+values in TSX and palette names outside `globals.css`; components consume the
+semantic tokens (`bg-bg`, `text-fg`, ...). A web app manifest is JSON, and
+Next's `viewport.themeColor` and iOS `appleWebApp` metadata are plain values,
+not React props; none of them can read a CSS custom property.
+
+**Decision.** `frontend/app/manifest.ts` writes the light-mode Zorn background
+(`#f1ead9`) as `background_color` and `theme_color`, and `layout.tsx` writes the
+same value as `viewport.themeColor`. The iOS tags (`appleWebApp.capable`,
+`statusBarStyle`, `title`) are set in the layout metadata. These are the only
+places outside `globals.css` that carry a colour, and they are values the
+browser reads before any CSS is applied.
+
+**Consequence.** The literals must be kept in step with `globals.css` by hand.
+There are two of them, both the background token, and they are light-mode only:
+the manifest has one theme colour and no notion of the dark rotation. A dark
+status bar in the installed app would need `theme_color` to follow the stored
+mode, which is a later refinement, not part of this phase.
+
+**Cross-reference.** `frontend/app/manifest.ts`, `frontend/app/layout.tsx`,
+`docs/STYLEGUIDE.md` §9.
+

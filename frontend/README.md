@@ -53,11 +53,17 @@ committed; see `infra/secrets.md`.
 
 - `app/` — App Router pages, layouts and the theme bootstrap script.
 - `app/globals.css` — the canonical theme token layer.
+- `app/manifest.ts` — the web app manifest, exported as `manifest.webmanifest`.
+- `app/service-worker-register.tsx` — registers the app-shell worker in
+  production only.
+- `public/sw.js` — the hand-written service worker; caches the app shell and
+  leaves API calls alone. See `docs/DECISIONS.md` entries 42 and 43.
 - `components/base/` — shared UI primitives; see
   [`components/base/README.md`](components/base/README.md).
 - `components/player/` — the playback surface (mini and full player, scrubber,
   audio element).
-- `lib/` — auth, API, theme and player providers.
+- `lib/` — auth, API, theme and player providers, the read cache and the Media
+  Session binding (`lib/media-session.ts`).
 
 `app/player-aware-main.tsx` is the shared wrapper that reserves room for the
 fixed player bar under every route's content.

@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Header from "./header";
+import ServiceWorkerRegister from "./service-worker-register";
 import WakingNotice from "./waking-notice";
 import AudioElement from "@/components/player/audio-element";
 import MiniPlayer from "@/components/player/mini-player";
@@ -24,6 +25,23 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Podplayer",
   description: "A disciplined, cross-device podcast player.",
+  // iOS reads its own tags rather than the web manifest for the standalone
+  // chrome and the home-screen title. See docs/DECISIONS.md entry 45.
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Podplayer",
+  },
+};
+
+/**
+ * The browser UI colour. Android draws it into the status bar of the installed
+ * app, so it mirrors the manifest's light-mode Zorn background token. A hex
+ * literal, for the same reason the manifest carries literals: neither is TSX
+ * and neither can read the CSS custom properties.
+ */
+export const viewport: Viewport = {
+  themeColor: "#f1ead9",
 };
 
 /**
@@ -54,6 +72,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="flex min-h-full flex-col bg-bg text-fg">
+        {/* Client child of the server layout: registers the app-shell worker in
+            production only. Renders nothing. See docs/DECISIONS.md entry 42. */}
+        <ServiceWorkerRegister />
         <ThemeProvider>
           <AuthProvider>
             <PodcastSourceProvider>

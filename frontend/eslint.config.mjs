@@ -60,6 +60,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The service worker is plain JavaScript served as-is, not part of the
+    // application bundle; its globals (`self`, `caches`) are not lint targets.
+    "public/**",
   ]),
   {
     files: ["**/*.tsx"],

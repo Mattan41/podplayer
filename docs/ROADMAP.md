@@ -39,7 +39,7 @@ Step 4 is delivered as six phases. See `docs/roadmap/` for each.
 | C | [Library UI](roadmap/library-ui.md) — **done** | Phase B |
 | D | [Playback engine](roadmap/playback-engine.md) — **done** | Phase A (playback state schema), Phase C |
 | E | [Playback state](roadmap/playback-state.md) — **done** | Phase D |
-| F | [PWA and Media Session](roadmap/pwa-media-session.md) | Phase E |
+| F | [PWA and Media Session](roadmap/pwa-media-session.md) — **in progress** | Phase E |
 
 ### Phase A — Domain model
 
@@ -92,6 +92,13 @@ seam; and the writes and the resume rule in `PlayerProvider`. See
 Installable app, lock-screen controls, offline metadata cache. Does not
 include offline audio; that is Phase G.
 
+In progress. The web app manifest (`app/manifest.ts`), the hand-written
+app-shell service worker (`public/sw.js`) with its production-only registration,
+and the Media Session binding (`lib/media-session.ts`) are in place. See
+`DECISIONS.md` entries 42–45. The device criteria — install prompt, headphone
+buttons, lock-screen artwork, offline cold open — are verified on a real device,
+not in CI.
+
 ---
 
 ## Planned after Step 4
@@ -125,12 +132,8 @@ reason, not as a dedicated phase.
   one file per feature as endpoints arrive, matching the level of detail
   in `DECISIONS.md`.
 
-  - **Retire the counter.** Remove CounterController, Counter entity and
-  CounterRepository in one commit. Then add V3__drop_counter.sql that
-  drops the counter table, deploy, and verify. Not urgent, but the
-  backend has carried it since the walking skeleton.
 
-  - **Documentation audit after C.6.** Run the same audit that produced
-  the fixes before Phase A: stale facts, contradictions, dead links,
-  orphan sections, missing references. Focus on changes since the last
-  audit (C.5 cache, DECISIONS 19-23, the podcast route refactor).
+  - **Documentation audit** Run the same audit that we have done a few tims now: stale facts, contradictions, dead links, orphan sections, missing references.
+
+  - Sonarcube reports
+  - ask Claude for honest opinion on the documentation

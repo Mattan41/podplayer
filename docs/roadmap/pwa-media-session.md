@@ -4,7 +4,9 @@ Make the app installable, integrate with the OS media controls (lock screen,
 notification shade, headphone buttons), and cache enough metadata to open
 without a network round trip. Offline *audio* is Phase G.
 
-**Status: not started.**
+**Status: in progress.** Code and unit tests are in place (manifest,
+`public/sw.js`, `lib/service-worker.ts`, `lib/media-session.ts`); the
+device-level acceptance criteria remain to be verified on real hardware.
 
 ## Deliverables
 
