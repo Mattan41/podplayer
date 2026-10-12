@@ -124,10 +124,6 @@ reason, not as a dedicated phase.
   authorization at class level. `AdminUserController` gets it the next
   time it is modified. `SecurityConfig` keeps only the coarse rules
   (`/api/auth/**` permitAll, everything else authenticated).
-- **Remove the backend counter.** The frontend counter page is gone as of
-  C.5 (`DECISIONS.md` entry 21); `CounterController`, the `Counter`
-  entity and the `counter` table remain and are removed together — the
-  table last, via a Flyway migration — in a change of their own.
 - **`docs/api/`** exists as of Phase B, starting with `podcasts.md`. Add
   one file per feature as endpoints arrive, matching the level of detail
   in `DECISIONS.md`.

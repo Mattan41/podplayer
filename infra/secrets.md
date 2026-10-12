@@ -55,15 +55,15 @@ These steps are performed **manually** against the Supabase project. They are de
 
 ### 1. Enable Row Level Security
 
-Seven tables live in the `public` schema. `allowed_users` and the four podcast tables (`podcast`, `episode`, `subscription`, `playback_state`) are created by the Flyway migrations `V1__create_allowed_users.sql` and `V2__create_podcast_tables.sql`, which the backend applies on startup. `counter` pre-existed and is absorbed by `spring.flyway.baseline-on-migrate`; `flyway_schema_history` is Flyway's own bookkeeping table.
+Six tables live in the `public` schema. `allowed_users` and the four podcast tables (`podcast`, `episode`, `subscription`, `playback_state`) are created by the Flyway migrations `V1__create_allowed_users.sql` and `V2__create_podcast_tables.sql`, which the backend applies on startup; `V3__drop_counter_table.sql` removes the walking-skeleton `counter` table that predated Flyway. `flyway_schema_history` is Flyway's own bookkeeping table.
 
-Supabase exposes `public` through PostgREST, so all seven need Row Level Security enabled and a deny-all policy for the `anon` and `authenticated` roles. The backend is unaffected: it connects over JDBC as the `postgres` role, which bypasses RLS.
+Supabase exposes `public` through PostgREST, so all six need Row Level Security enabled and a deny-all policy for the `anon` and `authenticated` roles. The backend is unaffected: it connects over JDBC as the `postgres` role, which bypasses RLS.
 
 The SQL is kept in [`db-bootstrap.sql`](./db-bootstrap.sql), steps 1 and 2. It is deliberately not repeated here, so that there is a single canonical copy to run.
 
 > **Required before the frontend anon key is deployed.** The anon key is public — it is shipped to every browser. RLS is the only thing preventing unauthorised reads through PostgREST.
 
-All seven tables must report `relrowsecurity = t`:
+All six tables must report `relrowsecurity = t`:
 
 ```sql
 SELECT n.nspname AS schema, c.relname, c.relrowsecurity
@@ -71,7 +71,6 @@ FROM pg_class c
 JOIN pg_namespace n ON n.oid = c.relnamespace
 WHERE c.relname IN (
         'allowed_users',
-        'counter',
         'flyway_schema_history',
         'podcast',
         'episode',
@@ -81,7 +80,7 @@ WHERE c.relname IN (
 ORDER BY n.nspname, c.relname;
 ```
 
-Run the file once against a fresh project, after the backend has started successfully and Flyway has applied V1 and V2.
+Run the file once against a fresh project, after the backend has started successfully and Flyway has applied V1, V2 and V3.
 
 ### 2. Insert the First Administrator
 

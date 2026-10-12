@@ -31,8 +31,6 @@ spring:
     cache-names: whitelist
     caffeine:
       spec: expireAfterWrite=60s,maximumSize=1000
-  cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   # Render controller-raised ResponseStatusException as an RFC 9457 ProblemDetail
   # (title, status, detail, instance; `type` is omitted as the RFC 9457 default)
   # instead of Spring's legacy /error JSON (timestamp, status, error, path). The
@@ -41,6 +39,12 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+# CORS is read by CorsConfig as `${cors.allowed-origins}`, so it is a top-level
+# key. It must not sit under `spring`: that would be `spring.cors.allowed-origins`
+# and nothing would read it. The default keeps a fresh checkout runnable without
+# the environment variable, which is what lets the CI backend job stay secret-free.
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
 server:
   port: 8080
 supabase:
